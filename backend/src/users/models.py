@@ -1,6 +1,7 @@
 from django.db import models
-from encrypted_model_fields.fields import EncryptedCharField, EncryptedTextField
+from encrypted_model_fields.fields import EncryptedCharField, EncryptedTextField, EncryptedDateField
 import uuid
+from datetime import date
 
 class UserProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -53,9 +54,9 @@ class UserSettings(models.Model):
 
 class LLMContextProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE)
 
-    age = models.IntegerField(blank=True, null=True)
+    date_of_birth = EncryptedDateField(blank=True, null=True, help_text="User's date of birth")
     gender = EncryptedCharField(max_length=50, blank=True, null=True)
     ethnic_background = EncryptedCharField(max_length=255, blank=True, null=True)
     
@@ -109,6 +110,21 @@ class LLMContextProfile(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def age(self):
+        """Calculate age from date of birth."""
+        if not self.date_of_birth:
+            return None
+        
+        today = date.today()
+        age = today.year - self.date_of_birth.year
+        
+        # Adjust if birthday hasn't occurred yet this year
+        if (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day):
+            age -= 1
+        
+        return age
 
     def __str__(self):
     # Try to get preferred_name from UserProfile, then fall back to email

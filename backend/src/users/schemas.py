@@ -46,7 +46,7 @@ class UserSettingsUpdateSchema(Schema):
 
 # Personal Information
 class PersonalInfoSchema(Schema):
-    age: Optional[int] = None
+    date_of_birth: Optional[str] = None  # ISO format date string (YYYY-MM-DD)
     gender: Optional[str] = None
     ethnic_background: Optional[str] = None
     occupation: Optional[str] = None
@@ -54,12 +54,6 @@ class PersonalInfoSchema(Schema):
     living_situation: Optional[str] = None
     has_children: Optional[bool] = None
     children_info: Optional[str] = None
-
-    @staticmethod
-    def validate_age(value: int) -> int:
-        if value and (value < 0 or value > 120):
-            raise ValueError("Age must be between 0 and 120")
-        return value
 
 # Wellbeing Context
 class WellbeingContextSchema(Schema):
@@ -103,7 +97,8 @@ class LLMContextProfileSchema(Schema):
     """Schema for reading complete LLM context profile"""
     id: UUID
     user_id: int
-    age: Optional[int] = None
+    date_of_birth: Optional[str] = None  # ISO format date string
+    age: Optional[int] = None  # Computed from date_of_birth
     gender: Optional[str] = None
     ethnic_background: Optional[str] = None
     occupation: Optional[str] = None
@@ -136,15 +131,16 @@ class LLMContextProfileSchema(Schema):
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "user_id": 1,
-                "age": 30,
+                "date_of_birth": "1990-01-15",
+                "age": 35,
                 "gender": "M"
             }
         }
 
 # Create Schema - All fields optional except user
 class LLMContextProfileCreateSchema(Schema):
-    """Schema for creating a profile"""
-    age: Optional[int] = None
+    """Schema for creating/updating a profile"""
+    date_of_birth: Optional[str] = None  # ISO format date string (YYYY-MM-DD)
     gender: Optional[str] = None
     ethnic_background: Optional[str] = None
     occupation: Optional[str] = None
@@ -171,12 +167,6 @@ class LLMContextProfileCreateSchema(Schema):
     lifepal_usage_goals: Optional[str] = None
     topics_of_interest: Optional[str] = None
     topics_to_avoid: Optional[str] = None
-
-    @staticmethod
-    def validate_age(value: int) -> int:
-        if value is not None and (value < 0 or value > 120):
-            raise ValueError("Age must be between 0 and 120")
-        return value
         
 # Update Schemas - Only include fields that can be updated
 class LLMContextProfileUpdateSchema(Schema):
@@ -193,7 +183,8 @@ class LLMContextProfileUpdateSchema(Schema):
 class LLMContextProfileListSchema(Schema):
     """Schema for list view of LLM context profiles"""
     user_id: int
-    age: Optional[int] = None
+    date_of_birth: Optional[str] = None
+    age: Optional[int] = None  # Computed
     occupation: Optional[str] = None
     communication_style: Optional[str] = None
     last_updated: datetime

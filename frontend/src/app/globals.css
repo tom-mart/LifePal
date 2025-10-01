@@ -1,26 +1,93 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer utilities {
+  /* Fade in animation */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  .animate-fade-in {
+    animation: fade-in 0.6s ease-out;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Mobile-optimized touch targets */
+  @media (max-width: 768px) {
+    .btn {
+      min-height: 44px;
+    }
+    
+    .input {
+      min-height: 44px;
+    }
+  }
+
+  /* PWA safe area support */
+  @supports (padding: max(0px)) {
+    body {
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+
+  /* Improved focus states for accessibility */
+  .btn:focus-visible,
+  .input:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+
+  /* Logo contrast adjustment for dark themes */
+  [data-theme="dark"],
+  [data-theme="night"],
+  [data-theme="forest"],
+  [data-theme="black"],
+  [data-theme="luxury"],
+  [data-theme="dracula"],
+  [data-theme="business"],
+  [data-theme="coffee"],
+  [data-theme="dim"],
+  [data-theme="sunset"],
+  [data-theme="halloween"],
+  [data-theme="synthwave"],
+  [data-theme="cyberpunk"] {
+    --logo-filter: invert(1) brightness(1.2);
+  }
+
+  /* Light themes - no filter needed */
+  [data-theme="light"],
+  [data-theme="cupcake"],
+  [data-theme="bumblebee"],
+  [data-theme="emerald"],
+  [data-theme="corporate"],
+  [data-theme="retro"],
+  [data-theme="valentine"],
+  [data-theme="garden"],
+  [data-theme="aqua"],
+  [data-theme="lofi"],
+  [data-theme="pastel"],
+  [data-theme="fantasy"],
+  [data-theme="wireframe"],
+  [data-theme="cmyk"],
+  [data-theme="autumn"],
+  [data-theme="acid"],
+  [data-theme="lemonade"],
+  [data-theme="winter"],
+  [data-theme="nord"] {
+    --logo-filter: none;
+  }
 }
