@@ -116,15 +116,6 @@ export default function ChatPage() {
     setIsStreaming(true);
     streamingMessageRef.current = '';
 
-    // Add placeholder for assistant message
-    const tempAssistantMessage: Message = {
-      id: `temp-assistant-${Date.now()}`,
-      role: 'assistant',
-      content: '',
-      created_at: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, tempAssistantMessage]);
-
     try {
       const stream = await apiClient.streamPost('/api/chat/send/stream', {
         message: userMessage,
@@ -156,6 +147,14 @@ export default function ChatPage() {
                 const lastMessage = newMessages[newMessages.length - 1];
                 if (lastMessage && lastMessage.role === 'assistant') {
                   lastMessage.content = streamingMessageRef.current;
+                } else {
+                  // Create assistant message if it doesn't exist
+                  newMessages.push({
+                    id: `temp-assistant-${Date.now()}`,
+                    role: 'assistant',
+                    content: streamingMessageRef.current,
+                    created_at: new Date().toISOString(),
+                  });
                 }
                 return newMessages;
               });
@@ -472,7 +471,7 @@ export default function ChatPage() {
                           {user?.username?.[0]?.toUpperCase() || 'U'}
                         </div>
                       ) : (
-                        <LifePalLogo size="sm" variant="simple" />
+                        <LifePalLogo size="md" variant="simple" />
                       )}
                     </div>
                     
@@ -482,31 +481,22 @@ export default function ChatPage() {
                         ? 'bg-primary text-primary-content rounded-br-md' 
                         : 'bg-base-100 border border-base-200 rounded-bl-md'
                     }`}>
-                      <p className="text-sm whitespace-pre-wrap">{message.content || (isStreaming && index === messages.length - 1 ? '...' : '')}</p>
+                      {message.content ? (
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      ) : (
+                        isStreaming && index === messages.length - 1 && (
+                          <div className="flex items-center space-x-1 text-base-content/50">
+                            <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                            <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                          </div>
+                        )
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
               
-              {/* Streaming message */}
-              {isStreaming && (
-                <div className="flex justify-start">
-                  <div className="flex max-w-[80%] flex-row items-start space-x-3">
-                    <div className="flex-shrink-0">
-                      <LifePalLogo size="sm" variant="simple" pulse={true} />
-                    </div>
-                    <div className="px-4 py-3 rounded-2xl bg-base-100 border border-base-200 rounded-bl-md">
-                      <div className="text-sm">
-                        <div className="flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                          <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
               
               <div ref={messagesEndRef} />
             </div>

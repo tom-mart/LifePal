@@ -188,3 +188,56 @@ class LLMContextProfileListSchema(Schema):
     occupation: Optional[str] = None
     communication_style: Optional[str] = None
     last_updated: datetime
+
+
+# AI Identity Profile Schemas
+class AIIdentityProfileSchema(Schema):
+    """Schema for reading AI Identity profile"""
+    id: UUID
+    user_id: int
+    preferred_model: str
+    ai_name: str
+    ai_role: str
+    ai_personality_traits: str
+    core_instructions: str
+    communication_style: str
+    response_length_preference: str
+    topics_to_emphasize: str
+    topics_to_avoid: str
+    custom_instructions: str
+    use_emojis: bool
+    formality_level: str
+    question_frequency: str
+    remember_preferences: bool
+    proactive_suggestions: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class AIIdentityProfileUpdateSchema(Schema):
+    """Schema for updating AI Identity profile"""
+    preferred_model: Optional[str] = None
+    ai_name: Optional[str] = None
+    ai_role: Optional[str] = None
+    ai_personality_traits: Optional[str] = None
+    core_instructions: Optional[str] = None
+    communication_style: Optional[str] = None
+    response_length_preference: Optional[str] = None
+    topics_to_emphasize: Optional[str] = None
+    topics_to_avoid: Optional[str] = None
+    custom_instructions: Optional[str] = None
+    use_emojis: Optional[bool] = None
+    formality_level: Optional[str] = None
+    question_frequency: Optional[str] = None
+    remember_preferences: Optional[bool] = None
+    proactive_suggestions: Optional[bool] = None
+
+
+class SystemPromptPreviewSchema(Schema):
+    """Schema for system prompt preview"""
+    system_prompt: str
+
+
+class AvailableModelsSchema(Schema):
+    """Schema for available Ollama models"""
+    models: list[str]

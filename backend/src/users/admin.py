@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 
-from .models import UserProfile, UserSettings, LLMContextProfile
+from .models import UserProfile, UserSettings, LLMContextProfile, AIIdentityProfile
 
 
 @admin.register(UserProfile)
@@ -101,4 +101,46 @@ class LLMContextProfileAdmin(admin.ModelAdmin):
         """Override to ensure all records are shown."""
         qs = super().get_queryset(request)
         # Use select_related to optimize queries
+        return qs.select_related('user')
+
+
+@admin.register(AIIdentityProfile)
+class AIIdentityProfileAdmin(admin.ModelAdmin):
+    list_display = ('id', 'get_user_email', 'ai_name', 'preferred_model', 'formality_level', 'updated_at')
+    search_fields = ('user__email', 'user__username', 'ai_name')
+    list_filter = ('formality_level', 'response_length_preference', 'question_frequency', 'use_emojis')
+    readonly_fields = ('id', 'created_at', 'updated_at')
+    
+    fieldsets = (
+        ('User Information', {
+            'fields': ('id', 'user', 'created_at', 'updated_at')
+        }),
+        ('Model Selection', {
+            'fields': ('preferred_model',)
+        }),
+        ('AI Identity', {
+            'fields': ('ai_name', 'ai_role', 'ai_personality_traits')
+        }),
+        ('System Prompt', {
+            'fields': ('core_instructions', 'communication_style', 'response_length_preference')
+        }),
+        ('Conversation Guidelines', {
+            'fields': ('topics_to_emphasize', 'topics_to_avoid', 'custom_instructions'),
+            'classes': ('collapse',)
+        }),
+        ('Behavior Preferences', {
+            'fields': ('use_emojis', 'formality_level', 'question_frequency')
+        }),
+        ('Context Awareness', {
+            'fields': ('remember_preferences', 'proactive_suggestions')
+        }),
+    )
+    
+    def get_user_email(self, obj):
+        return obj.user.email if obj.user else 'N/A'
+    get_user_email.short_description = 'Email'
+    get_user_email.admin_order_field = 'user__email'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
         return qs.select_related('user')

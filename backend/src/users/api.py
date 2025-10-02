@@ -14,9 +14,13 @@ from .schemas import (
     LLMContextProfileUpdateSchema,
     PersonalInfoSchema,
     WellbeingContextSchema,
-    PreferencesSchema
+    PreferencesSchema,
+    AIIdentityProfileSchema,
+    AIIdentityProfileUpdateSchema,
+    SystemPromptPreviewSchema,
+    AvailableModelsSchema
 )
-from .models import LLMContextProfile, UserProfile, UserSettings
+from .models import LLMContextProfile, UserProfile, UserSettings, AIIdentityProfile
 from django.db import transaction
 
 router = Router()
@@ -216,3 +220,93 @@ def reactivate_account(request):
     request.user.is_active = True
     request.user.save()
     return {"success": True}
+
+
+# AI Identity Profile Endpoints
+@router.get("/ai-identity", auth=JWTAuth(), response=AIIdentityProfileSchema, tags=["AI Identity"])
+def get_ai_identity(request):
+    """Get user's AI identity profile"""
+    profile = AIIdentityProfile.get_or_create_for_user(request.user)
+    return {
+        'id': profile.id,
+        'user_id': profile.user.id,
+        'preferred_model': profile.preferred_model,
+        'ai_name': profile.ai_name,
+        'ai_role': profile.ai_role,
+        'ai_personality_traits': profile.ai_personality_traits,
+        'core_instructions': profile.core_instructions,
+        'communication_style': profile.communication_style,
+        'response_length_preference': profile.response_length_preference,
+        'topics_to_emphasize': profile.topics_to_emphasize,
+        'topics_to_avoid': profile.topics_to_avoid,
+        'custom_instructions': profile.custom_instructions,
+        'use_emojis': profile.use_emojis,
+        'formality_level': profile.formality_level,
+        'question_frequency': profile.question_frequency,
+        'remember_preferences': profile.remember_preferences,
+        'proactive_suggestions': profile.proactive_suggestions,
+        'created_at': profile.created_at,
+        'updated_at': profile.updated_at,
+    }
+
+
+@router.patch("/ai-identity", auth=JWTAuth(), response=AIIdentityProfileSchema, tags=["AI Identity"])
+def update_ai_identity(request, payload: AIIdentityProfileUpdateSchema):
+    """Update user's AI identity profile"""
+    profile = AIIdentityProfile.get_or_create_for_user(request.user)
+    data = payload.dict(exclude_unset=True)
+    
+    for field, value in data.items():
+        setattr(profile, field, value)
+    profile.save()
+    
+    return {
+        'id': profile.id,
+        'user_id': profile.user.id,
+        'preferred_model': profile.preferred_model,
+        'ai_name': profile.ai_name,
+        'ai_role': profile.ai_role,
+        'ai_personality_traits': profile.ai_personality_traits,
+        'core_instructions': profile.core_instructions,
+        'communication_style': profile.communication_style,
+        'response_length_preference': profile.response_length_preference,
+        'topics_to_emphasize': profile.topics_to_emphasize,
+        'topics_to_avoid': profile.topics_to_avoid,
+        'custom_instructions': profile.custom_instructions,
+        'use_emojis': profile.use_emojis,
+        'formality_level': profile.formality_level,
+        'question_frequency': profile.question_frequency,
+        'remember_preferences': profile.remember_preferences,
+        'proactive_suggestions': profile.proactive_suggestions,
+        'created_at': profile.created_at,
+        'updated_at': profile.updated_at,
+    }
+
+
+@router.get("/ai-identity/preview-prompt", auth=JWTAuth(), response=SystemPromptPreviewSchema, tags=["AI Identity"])
+def preview_system_prompt(request):
+    """Preview the generated system prompt based on current settings"""
+    profile = AIIdentityProfile.get_or_create_for_user(request.user)
+    return {'system_prompt': profile.generate_system_prompt()}
+
+
+@router.get("/ai-identity/available-models", auth=JWTAuth(), response=AvailableModelsSchema, tags=["AI Identity"])
+def get_available_models(request):
+    """Get list of available Ollama models"""
+    from llm_service.ollama_client import OllamaClient
+    
+    try:
+        client = OllamaClient()
+        models = client.list_models()
+        return {'models': models}
+    except Exception as e:
+        # Return default models if Ollama is not available
+        return {
+            'models': [
+                'gemma3:latest',
+                'llama3.2:latest',
+                'llama3.2:3b',
+                'mistral:latest',
+                'phi3:latest',
+            ]
+        }

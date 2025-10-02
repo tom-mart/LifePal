@@ -1,13 +1,15 @@
 import logging
 from typing import Optional
 from django.contrib.auth.models import User
+from users.models import AIIdentityProfile
 
 logger = logging.getLogger(__name__)
 
 class PromptManager:
     """Manages system prompts for LLM interactions with user context."""
     
-    BASE_SYSTEM_PROMPT = """You are Frankie a LifePal AI assistant, a compassionate AI wellness companion designed to support users in their day to day life.
+    # Default fallback prompt if no AIIdentityProfile exists
+    DEFAULT_SYSTEM_PROMPT = """You are LifePal, a supportive life assistant and wellbeing companion.
 
 Your core personality:
 - Empathetic and understanding, never judgmental
@@ -29,11 +31,12 @@ Always respond with warmth and understanding. Use markdown formatting for better
         """Initialize PromptManager with optional user context.
         
         Args:
-            user: Django User instance. If provided, will load UserProfile and LLMContextProfile.
+            user: Django User instance. If provided, will load UserProfile, LLMContextProfile, and AIIdentityProfile.
         """
         self.user = user
         self.user_profile = None
         self.context_profile = None
+        self.ai_identity = None
         
         if user:
             # Load UserProfile if exists
@@ -43,6 +46,9 @@ Always respond with warmth and understanding. Use markdown formatting for better
             # Load LLMContextProfile if exists
             if hasattr(user, 'llmcontextprofile'):
                 self.context_profile = user.llmcontextprofile
+            
+            # Load or create AIIdentityProfile
+            self.ai_identity = AIIdentityProfile.get_or_create_for_user(user)
     
     def get_system_prompt(self, include_user_context: bool = True, include_dynamic_context: bool = True) -> str:
         """Generate system prompt with optional user context.
@@ -54,7 +60,11 @@ Always respond with warmth and understanding. Use markdown formatting for better
         Returns:
             Complete system prompt string.
         """
-        prompt = self.BASE_SYSTEM_PROMPT
+        # Use AI Identity Profile to generate base prompt, or fall back to default
+        if self.ai_identity:
+            prompt = self.ai_identity.generate_system_prompt()
+        else:
+            prompt = self.DEFAULT_SYSTEM_PROMPT
         
         # Add dynamic context (date, time, etc.)
         if include_dynamic_context:
