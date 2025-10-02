@@ -88,4 +88,3 @@ docker-compose.override.yml
 !Dockerfile.prod
 !.dockerignore
 !nginx.conf
-!deploy.sh
