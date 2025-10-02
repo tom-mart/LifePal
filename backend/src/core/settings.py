@@ -13,10 +13,62 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 
-from .settings_local import *  # Import settings from settings_local.py
+# Only import settings_local in development (when DEBUG env var is not explicitly set to False)
+if os.environ.get('DEBUG', 'True') != 'False':
+    try:
+        from .settings_local import *
+    except ImportError:
+        pass
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Override with environment variables if they exist (for production)
+SECRET_KEY = os.environ.get('SECRET_KEY', globals().get('SECRET_KEY', 'django-insecure-change-this'))
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+
+# Database - override if DATABASE_URL environment variable exists
+if 'DATABASE_URL' in os.environ:
+    # Parse DATABASE_URL: postgresql://user:password@host:port/dbname
+    db_url = os.environ.get('DATABASE_URL')
+    db_parts = db_url.replace('postgresql://', '').split('@')
+    user_pass = db_parts[0].split(':')
+    host_db = db_parts[1].split('/')
+    host_port = host_db[0].split(':')
+    
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': host_db[1],
+            'USER': user_pass[0],
+            'PASSWORD': user_pass[1],
+            'HOST': host_port[0],
+            'PORT': host_port[1] if len(host_port) > 1 else '5432',
+        }
+    }
+
+# Field encryption key from environment
+if 'FIELD_ENCRYPTION_KEY' in os.environ:
+    FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY')
+
+# Ollama settings from environment (only override if env var exists)
+if 'OLLAMA_BASE_URL' in os.environ:
+    OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL')
+elif 'OLLAMA_BASE_URL' not in globals():
+    OLLAMA_BASE_URL = 'http://localhost:11434'
+
+if 'OLLAMA_DEFAULT_MODEL' in os.environ:
+    OLLAMA_DEFAULT_MODEL = os.environ.get('OLLAMA_DEFAULT_MODEL')
+elif 'OLLAMA_DEFAULT_MODEL' not in globals():
+    OLLAMA_DEFAULT_MODEL = 'llama2'
+
+# CORS settings from environment
+if 'CORS_ALLOWED_ORIGINS' in os.environ:
+    CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS').split(',')
+    CORS_ALLOW_ALL_ORIGINS = False
+if 'CSRF_TRUSTED_ORIGINS' in os.environ:
+    CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS').split(',')
 
 
 # Quick-start development settings - unsuitable for production
@@ -42,7 +94,7 @@ INSTALLED_APPS = [
     'llm_chat',
 
     'users',
-    'diary',
+    'wellbeing',
     'todo',
 
 ]
@@ -114,8 +166,19 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Celery Configuration
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'

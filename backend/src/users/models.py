@@ -64,6 +64,8 @@ class LLMContextProfile(models.Model):
     relationship_status = EncryptedCharField(max_length=100, blank=True, null=True)
     living_situation = EncryptedCharField(max_length=100, blank=True, null=True,
                                       help_text="E.g., 'Lives alone', 'With family', 'Shared housing'")
+    location = EncryptedCharField(max_length=255, blank=True, null=True,
+                                  help_text="User's location (city, country)")
     has_children = models.BooleanField(null=True, blank=True)  # Not encrypted as it's a boolean
     children_info = EncryptedTextField(blank=True, null=True,
                                    help_text="Brief info about children if applicable")

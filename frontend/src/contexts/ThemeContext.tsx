@@ -2,47 +2,41 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-const AVAILABLE_THEMES = [
-  'light',
-  'dark',
-  'cupcake',
-  'bumblebee',
-  'emerald',
-  'corporate',
-  'synthwave',
-  'retro',
-  'cyberpunk',
-  'valentine',
-  'halloween',
-  'garden',
-  'forest',
-  'aqua',
-  'lofi',
-  'pastel',
-  'fantasy',
-  'wireframe',
-  'black',
-  'luxury',
-  'dracula',
-  'cmyk',
-  'autumn',
-  'business',
-  'acid',
-  'lemonade',
-  'night',
-  'coffee',
-  'winter',
-  'dim',
-  'nord',
-  'sunset',
+// Theme configuration with icons and descriptions
+const THEME_CONFIG = [
+  { name: 'light', icon: '☀️', description: 'Clean & bright' },
+  { name: 'dark', icon: '🌙', description: 'Easy on eyes' },
+  { name: 'cupcake', icon: '🧁', description: 'Sweet & soft' },
+  { name: 'emerald', icon: '💚', description: 'Fresh & natural' },
+  { name: 'corporate', icon: '💼', description: 'Professional' },
+  { name: 'synthwave', icon: '🌆', description: 'Retro neon' },
+  { name: 'cyberpunk', icon: '🤖', description: 'Futuristic' },
+  { name: 'valentine', icon: '💝', description: 'Romantic pink' },
+  { name: 'forest', icon: '🌲', description: 'Nature green' },
+  { name: 'aqua', icon: '🌊', description: 'Ocean blue' },
+  { name: 'pastel', icon: '🎨', description: 'Soft colors' },
+  { name: 'dracula', icon: '🧛', description: 'Dark purple' },
+  { name: 'autumn', icon: '🍂', description: 'Warm tones' },
+  { name: 'business', icon: '📊', description: 'Minimal pro' },
+  { name: 'night', icon: '🌃', description: 'Deep dark' },
+  { name: 'sunset', icon: '🌅', description: 'Warm sunset' },
 ] as const;
 
+const AVAILABLE_THEMES = THEME_CONFIG.map(t => t.name) as readonly string[];
+
 type Theme = typeof AVAILABLE_THEMES[number];
+
+interface ThemeConfig {
+  name: string;
+  icon: string;
+  description: string;
+}
 
 interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
   availableThemes: readonly Theme[];
+  themeConfig: typeof THEME_CONFIG;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -76,7 +70,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, availableThemes: AVAILABLE_THEMES }}>
+    <ThemeContext.Provider value={{ theme, setTheme, availableThemes: AVAILABLE_THEMES, themeConfig: THEME_CONFIG }}>
       {children}
     </ThemeContext.Provider>
   );

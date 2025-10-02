@@ -3,8 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import LifePalLogo from '@/components/LifePalLogo';
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -20,14 +20,8 @@ export default function Home() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-base-100 to-secondary/10">
         <div className="text-center">
-          <div className="bg-gradient-to-br from-primary/20 to-secondary/20 backdrop-blur-sm p-6 rounded-2xl shadow-xl inline-block mb-4 border border-primary/30">
-            <Image
-              src="/LifePal-Main-TransparentBG.png"
-              alt="LifePal"
-              width={120}
-              height={120}
-              className="animate-pulse"
-            />
+          <div className="mb-4">
+            <LifePalLogo size="4xl" variant="default" pulse={true} />
           </div>
           <div>
             <span className="loading loading-spinner loading-lg text-primary"></span>
@@ -44,16 +38,8 @@ export default function Home() {
         <div className="hero-content text-center px-4">
           <div className="max-w-4xl">
             {/* Logo */}
-            <div className="mb-8 animate-fade-in">
-              <div className="bg-gradient-to-br from-primary/20 to-secondary/20 backdrop-blur-sm p-8 rounded-3xl shadow-2xl inline-block border-2 border-primary/30">
-                <Image
-                  src="/LifePal-Main-TransparentBG.png"
-                  alt="LifePal Logo"
-                  width={200}
-                  height={200}
-                  priority
-                />
-              </div>
+            <div className="mb-8 animate-fade-in flex justify-center">
+              <LifePalLogo size="4xl" variant="default" animated={true} />
             </div>
             
             <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent animate-fade-in">

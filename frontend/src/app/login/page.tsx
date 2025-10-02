@@ -3,8 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import LifePalLogo from '@/components/LifePalLogo';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -55,14 +55,8 @@ function LoginForm() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-base-100 to-secondary/10">
         <div className="text-center">
-          <div className="bg-gradient-to-br from-primary/20 to-secondary/20 backdrop-blur-sm p-6 rounded-2xl shadow-xl inline-block mb-4 border border-primary/30">
-            <Image
-              src="/LifePal-Main-TransparentBG.png"
-              alt="LifePal"
-              width={120}
-              height={120}
-              className="animate-pulse"
-            />
+          <div className="mb-4">
+            <LifePalLogo size="4xl" variant="default" pulse={true} />
           </div>
           <div>
             <span className="loading loading-spinner loading-lg text-primary"></span>
@@ -78,14 +72,7 @@ function LoginForm() {
         <div className="card-body">
           {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div className="bg-gradient-to-br from-primary/20 to-secondary/20 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-primary/30">
-              <Image
-                src="/LifePal-Main-TransparentBG.png"
-                alt="LifePal Logo"
-                width={80}
-                height={80}
-              />
-            </div>
+            <LifePalLogo size="3xl" variant="default" animated={true} />
           </div>
           
           <h2 className="card-title text-3xl font-bold text-center justify-center mb-2">

@@ -2,15 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { apiClient } from '@/lib/api';
+import LifePalLogo from '@/components/LifePalLogo';
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
   created_at: string;
 }
@@ -24,7 +23,7 @@ interface Conversation {
 
 export default function ChatPage() {
   const { user, loading: authLoading, logout } = useAuth();
-  const { theme, setTheme, availableThemes } = useTheme();
+  const { theme, setTheme, themeConfig } = useTheme();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -204,27 +203,23 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-base-200">
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 w-80 bg-base-200 border-r border-base-300 transition-transform duration-300 ease-in-out flex flex-col`}>
+      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:relative z-30 w-80 h-full bg-base-100 shadow-xl transition-transform duration-300 ease-in-out flex flex-col border-r border-base-200`}>
         {/* Sidebar Header */}
-        <div className="p-4 border-b border-base-300 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/LifePal-Main-TransparentBG.png"
-              alt="LifePal"
-              width={40}
-              height={40}
-              className="opacity-90 dark:invert"
-              style={{ filter: 'var(--logo-filter, none)' }}
-            />
-            <span className="text-xl font-bold">LifePal</span>
+        <div className="flex items-center justify-between p-6 border-b border-base-200 bg-gradient-to-r from-primary/5 to-secondary/5">
+          <div className="flex items-center space-x-3">
+            <LifePalLogo size="md" variant="gradient" />
+            <div>
+              <h1 className="font-bold text-lg text-base-content">LifePal</h1>
+              <p className="text-xs text-base-content/60">AI Life Assistant</p>
+            </div>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="btn btn-ghost btn-sm btn-square lg:hidden"
+            className="lg:hidden btn btn-ghost btn-sm btn-circle hover:bg-base-200"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -241,97 +236,124 @@ export default function ChatPage() {
         </div>
 
         {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto px-2">
-          {conversations.map((conv) => (
-            <div key={conv.id} className="relative group mb-1">
-              <button
-                onClick={() => loadConversation(conv.id)}
-                className={`btn btn-ghost w-full justify-start text-left h-auto py-3 px-3 ${
-                  currentConversationId === conv.id ? 'bg-base-300' : ''
-                }`}
-              >
-                <div className="flex-1 truncate pr-8">
-                  <div className="font-medium truncate">{conv.title}</div>
-                  <div className="text-xs opacity-60">
-                    {new Date(conv.updated_at).toLocaleDateString()}
-                  </div>
-                </div>
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm('Delete this conversation?')) {
-                    deleteConversation(conv.id);
-                  }
-                }}
-                className="btn btn-ghost btn-xs btn-square absolute right-2 top-1/2 -translate-y-1/2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity text-error"
-                title="Delete conversation"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          <h3 className="text-sm font-semibold text-base-content/70 mb-4 uppercase tracking-wide">Recent Conversations</h3>
+          <div className="space-y-2">
+            {conversations.length === 0 ? (
+              <div className="text-center py-8 text-base-content/50">
+                <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
-              </button>
-            </div>
-          ))}
+                <p className="text-sm">No conversations yet</p>
+                <p className="text-xs mt-1">Start a new chat to begin</p>
+              </div>
+            ) : (
+              conversations.map((conv) => (
+                <div
+                  key={conv.id}
+                  className={`group relative p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                    currentConversationId === conv.id 
+                      ? 'bg-primary/10 border border-primary/20 shadow-sm' 
+                      : 'hover:bg-base-200/70 hover:shadow-sm'
+                  }`}
+                  onClick={() => loadConversation(conv.id)}
+                >
+                  <div className="pr-8">
+                    <div className="font-medium text-sm truncate mb-1">{conv.title}</div>
+                    <div className="text-xs text-base-content/50">
+                      {new Date(conv.updated_at).toLocaleDateString(undefined, { 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm('Delete this conversation?')) {
+                        deleteConversation(conv.id);
+                      }
+                    }}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-error/20 rounded-lg"
+                    title="Delete conversation"
+                  >
+                    <svg className="w-3.5 h-3.5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
-        {/* User Menu at Bottom */}
-        <div className="p-4 border-t border-base-300">
-          <div className="dropdown dropdown-top dropdown-end w-full">
-            <label tabIndex={0} className="btn btn-ghost w-full justify-start gap-3">
-              <div className="avatar placeholder">
-                <div className="bg-primary text-primary-content rounded-full w-10">
-                  <span className="text-lg">{user.username[0].toUpperCase()}</span>
-                </div>
-              </div>
-              <div className="flex-1 text-left truncate">
-                <div className="font-medium truncate">{user.username}</div>
-              </div>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-            </label>
-            <ul tabIndex={0} className="dropdown-content menu p-2 shadow-lg bg-base-100 rounded-box w-full mb-2">
-              <li><Link href="/profile">Profile</Link></li>
-              <li><Link href="/settings">Settings</Link></li>
-              <li><Link href="/context">AI Context</Link></li>
-              <li className="border-t border-base-300 mt-1 pt-1">
-                <button onClick={logout} className="text-error">Logout</button>
-              </li>
-            </ul>
-          </div>
+        {/* Sidebar Footer */}
+        <div className="p-4 border-t border-base-200 space-y-2">
+          <button 
+            onClick={() => router.push('/profile')}
+            className="btn btn-ghost w-full justify-start gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            Profile & Settings
+          </button>
+          <button 
+            onClick={logout}
+            className="btn btn-ghost w-full justify-start gap-2 text-error"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Sign Out
+          </button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col h-screen">
-        {/* Top Bar */}
-        <div className="navbar bg-base-100 border-b border-base-300 flex-none">
-          <button
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* Mobile Header - Fixed positioning */}
+        <div className="lg:hidden sticky top-0 z-10 flex items-center justify-between p-3 bg-base-100/95 backdrop-blur-sm border-b border-base-200 shadow-sm">
+          <button 
             onClick={() => setSidebarOpen(true)}
-            className="btn btn-ghost btn-square lg:hidden"
+            className="btn btn-ghost btn-sm btn-circle"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <div className="flex-1">
-            <span className="text-lg font-semibold">Chat</span>
+          <div className="flex items-center space-x-2">
+            <LifePalLogo size="sm" variant="simple" />
+            <span className="font-semibold text-base">LifePal</span>
           </div>
           <div className="dropdown dropdown-end">
-            <label tabIndex={0} className="btn btn-ghost btn-circle">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <label tabIndex={0} className="btn btn-ghost btn-sm btn-circle">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
               </svg>
             </label>
-            <ul tabIndex={0} className="dropdown-content z-[100] menu bg-base-100 border border-base-300 rounded-box w-56 shadow-2xl mt-2 max-h-96 overflow-y-auto">
-              {availableThemes.map((t) => (
-                <li key={t} className="w-full">
+            <ul tabIndex={0} className="dropdown-content z-[100] menu p-2 bg-base-100 border border-base-300 rounded-box w-64 shadow-2xl mt-2 max-h-[70vh] overflow-y-auto" style={{display: 'block'}}>
+              <li className="menu-title">
+                <span className="text-xs font-semibold uppercase tracking-wider">Choose Theme</span>
+              </li>
+              {themeConfig.map((t) => (
+                <li key={t.name} style={{width: '100%'}}>
                   <button
-                    className={`${theme === t ? 'active' : ''} w-full text-left whitespace-nowrap`}
-                    onClick={() => setTheme(t)}
+                    className={`flex items-center gap-3 py-3 w-full ${theme === t.name ? 'active bg-primary/10' : ''}`}
+                    onClick={() => setTheme(t.name as any)}
                   >
-                    {t}
+                    <span className="text-2xl">{t.icon}</span>
+                    <div className="flex-1 text-left">
+                      <div className="font-medium capitalize">{t.name}</div>
+                      <div className="text-xs text-base-content/60">{t.description}</div>
+                    </div>
+                    {theme === t.name && (
+                      <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
                   </button>
                 </li>
               ))}
@@ -339,94 +361,194 @@ export default function ChatPage() {
           </div>
         </div>
 
+        {/* Desktop Header */}
+        <div className="hidden lg:flex items-center justify-between p-4 bg-base-100 border-b border-base-200">
+          <div className="flex items-center space-x-2">
+            <span className="text-lg font-semibold">Chat</span>
+            {currentConversationId && (
+              <span className="text-sm text-base-content/60">
+                • {conversations.find(c => c.id === currentConversationId)?.title || 'Conversation'}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="dropdown dropdown-end">
+              <label tabIndex={0} className="btn btn-ghost btn-sm gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                </svg>
+                <span className="hidden xl:inline">Theme</span>
+              </label>
+              <ul tabIndex={0} className="dropdown-content z-[100] menu p-2 bg-base-100 border border-base-300 rounded-box w-64 shadow-2xl mt-2 max-h-[70vh] overflow-y-auto" style={{display: 'block'}}>
+                <li className="menu-title">
+                  <span className="text-xs font-semibold uppercase tracking-wider">Choose Theme</span>
+                </li>
+                {themeConfig.map((t) => (
+                  <li key={t.name} style={{width: '100%'}}>
+                    <button
+                      className={`flex items-center gap-3 py-3 w-full ${theme === t.name ? 'active bg-primary/10' : ''}`}
+                      onClick={() => setTheme(t.name as any)}
+                    >
+                      <span className="text-2xl">{t.icon}</span>
+                      <div className="flex-1 text-left">
+                        <div className="font-medium capitalize">{t.name}</div>
+                        <div className="text-xs text-base-content/60">{t.description}</div>
+                      </div>
+                      {theme === t.name && (
+                        <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <button 
+              onClick={startNewConversation}
+              className="btn btn-ghost btn-sm gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Chat
+            </button>
+          </div>
+        </div>
+
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center max-w-lg px-4">
-                <Image
-                  src="/LifePal-Main-TransparentBG.png"
-                  alt="LifePal"
-                  width={120}
-                  height={120}
-                  className="mx-auto mb-6 opacity-80 dark:invert"
-                  style={{ filter: 'var(--logo-filter, none)' }}
-                />
-                <h2 className="text-3xl font-bold mb-3">Welcome to LifePal!</h2>
-                <p className="text-base-content/70 mb-8">Your AI assistant is ready to help. Start a conversation by typing a message below.</p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  <div className="badge badge-lg gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Real-time
+        <div className="flex-1 overflow-y-auto p-4 pb-0">
+          {messages.length === 0 && !isStreaming ? (
+            <div className="flex flex-col items-center justify-center h-full text-center max-w-2xl mx-auto px-4">
+              <div className="mb-6">
+                <LifePalLogo size="4xl" variant="default" animated={true} />
+              </div>
+              <h2 className="text-2xl font-bold mb-4">Welcome to LifePal!</h2>
+              <p className="text-base-content/70 mb-8">Your AI-powered life assistant is here to help you organize your thoughts, track your mood, and support your wellbeing journey.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-lg">
+                <div className="card bg-base-100 shadow-sm border border-base-200">
+                  <div className="card-body p-4">
+                    <div className="text-2xl mb-2">📝</div>
+                    <h3 className="font-semibold text-sm">Write & Reflect</h3>
+                    <p className="text-xs text-base-content/60">Share your thoughts and get personalized insights</p>
                   </div>
-                  <div className="badge badge-lg gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                    Secure
+                </div>
+                <div className="card bg-base-100 shadow-sm border border-base-200">
+                  <div className="card-body p-4">
+                    <div className="text-2xl mb-2">💭</div>
+                    <h3 className="font-semibold text-sm">Daily Check-ins</h3>
+                    <p className="text-xs text-base-content/60">Track your mood and wellbeing over time</p>
                   </div>
-                  <div className="badge badge-lg gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Private
+                </div>
+                <div className="card bg-base-100 shadow-sm border border-base-200">
+                  <div className="card-body p-4">
+                    <div className="text-2xl mb-2">🎯</div>
+                    <h3 className="font-semibold text-sm">Goal Setting</h3>
+                    <p className="text-xs text-base-content/60">Set and track your personal goals</p>
+                  </div>
+                </div>
+                <div className="card bg-base-100 shadow-sm border border-base-200">
+                  <div className="card-body p-4">
+                    <div className="text-2xl mb-2">💬</div>
+                    <h3 className="font-semibold text-sm">Chat & Support</h3>
+                    <p className="text-xs text-base-content/60">Get support and guidance anytime</p>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-              messages.map((message, index) => (
-                <div key={message.id || index} className={`chat ${message.role === 'user' ? 'chat-end' : 'chat-start'}`}>
-                  <div className="chat-image avatar placeholder">
-                    <div className={`w-10 rounded-full ${message.role === 'user' ? 'bg-primary text-primary-content' : 'bg-secondary text-secondary-content'}`}>
+            <div className="max-w-4xl mx-auto space-y-6">
+              {messages.filter(msg => msg.role !== 'system').map((message, index) => (
+                <div
+                  key={message.id || index}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`flex max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start space-x-3`}>
+                    {/* Avatar */}
+                    <div className="flex-shrink-0">
                       {message.role === 'user' ? (
-                        <span className="text-lg font-bold">{user.username[0].toUpperCase()}</span>
+                        <div className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm font-semibold">
+                          {user?.username?.[0]?.toUpperCase() || 'U'}
+                        </div>
                       ) : (
-                        <span className="text-lg">🤖</span>
+                        <LifePalLogo size="sm" variant="simple" />
                       )}
                     </div>
-                  </div>
-                  <div className={`chat-bubble ${message.role === 'user' ? 'chat-bubble-primary' : ''} max-w-[85%] md:max-w-2xl`}>
-                    {message.content || (isStreaming && index === messages.length - 1 ? <span className="loading loading-dots loading-sm"></span> : '')}
+                    
+                    {/* Message Content */}
+                    <div className={`px-4 py-3 rounded-2xl ${
+                      message.role === 'user' 
+                        ? 'bg-primary text-primary-content rounded-br-md' 
+                        : 'bg-base-100 border border-base-200 rounded-bl-md'
+                    }`}>
+                      <p className="text-sm whitespace-pre-wrap">{message.content || (isStreaming && index === messages.length - 1 ? '...' : '')}</p>
+                    </div>
                   </div>
                 </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-        {/* Input Area - Fixed at Bottom */}
-        <div className="border-t border-base-300 p-4 bg-base-100 flex-none">
-          <form onSubmit={handleSendMessage} className="flex gap-2 max-w-4xl mx-auto">
-            <input
-              type="text"
-              placeholder="Type your message..."
-              className="input input-bordered flex-1"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={isStreaming}
-            />
-            <button
-              type="submit"
-              className={`btn btn-primary ${isStreaming ? 'loading' : ''}`}
-              disabled={isStreaming || !input.trim()}
-            >
-              {!isStreaming && (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
+              ))}
+              
+              {/* Streaming message */}
+              {isStreaming && (
+                <div className="flex justify-start">
+                  <div className="flex max-w-[80%] flex-row items-start space-x-3">
+                    <div className="flex-shrink-0">
+                      <LifePalLogo size="sm" variant="simple" pulse={true} />
+                    </div>
+                    <div className="px-4 py-3 rounded-2xl bg-base-100 border border-base-200 rounded-bl-md">
+                      <div className="text-sm">
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                          <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
-            </button>
-          </form>
+              
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+
+        </div>
+
+        {/* Input Area - Fixed to bottom with safe area */}
+        <div className="sticky bottom-0 bg-base-100 border-t border-base-200 p-4 pb-safe">
+          <div className="max-w-4xl mx-auto">
+            <form onSubmit={handleSendMessage} className="flex items-end space-x-2 sm:space-x-3">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Type your message..."
+                  className="input input-bordered w-full pr-3"
+                  disabled={isStreaming}
+                />
+              </div>
+              
+              <button
+                type="submit"
+                className={`btn btn-primary btn-circle flex-shrink-0 ${isStreaming ? 'loading' : ''}`}
+                disabled={isStreaming || !input.trim()}
+              >
+                {!isStreaming && (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                )}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
 
-      {/* Overlay for mobile sidebar */}
+      {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+        <div 
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
           onClick={() => setSidebarOpen(false)}
         />
       )}

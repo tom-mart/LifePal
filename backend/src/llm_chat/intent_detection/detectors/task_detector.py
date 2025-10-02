@@ -42,13 +42,26 @@ class TaskDetector(BaseDetector):
         """Extract parameters for task creation"""
         params = {}
         
-        # Extract task title (remove common prefixes)
-        title = re.sub(
-            r'^(create|add|make|new)\s+(a\s+)?(task|todo|to-do|to do)[:,]?\s*',
-            '',
+        # Extract task title - handle various patterns
+        title = content
+        
+        # Pattern 1: "add/create task: <task>" or "add/create task <task>"
+        match = re.search(
+            r'(?:create|add|make|new)\s+(?:a\s+)?(?:task|todo|to-do|to do)(?:\s+to\s+my\s+(?:todo\s+)?list)?(?:\s+for\s+\w+)?[:,]\s*(.+)',
             content,
             flags=re.IGNORECASE
-        ).strip()
+        )
+        if match:
+            title = match.group(1).strip()
+        else:
+            # Pattern 2: Remove common prefixes without explicit separator
+            title = re.sub(
+                r'^(?:can\s+you\s+)?(?:please\s+)?(?:create|add|make|new)\s+(?:a\s+)?(?:task|todo|to-do|to do)(?:\s+to\s+my\s+(?:todo\s+)?list)?(?:\s+for\s+\w+)?[:,]?\s*',
+                '',
+                content,
+                flags=re.IGNORECASE
+            ).strip()
+        
         params['title'] = title if title else content
         
         # Extract priority

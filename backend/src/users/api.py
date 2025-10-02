@@ -23,8 +23,17 @@ router = Router()
 User = get_user_model()
 
 # Public endpoints (no auth required)
-@router.post("/register", response={201: dict}, tags=[" User Profile"])
+@router.post("/register", response={201: dict, 403: dict}, tags=[" User Profile"])
 def register_user(request, payload: UserRegistrationSchema):
+    # Check if registration is enabled (default: disabled in production)
+    from django.conf import settings
+    import os
+    
+    registration_enabled = os.environ.get('ALLOW_REGISTRATION', 'False') == 'True'
+    
+    if not registration_enabled:
+        return 403, {"success": False, "message": "Registration is currently disabled"}
+    
     with transaction.atomic():
         user = User.objects.create_user(
             username=payload.username,

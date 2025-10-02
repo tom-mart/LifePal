@@ -17,3 +17,4 @@ django-redis
 django-celery-beat
 django-encrypted-model-fields
 pydantic[email]
+dj-database-url

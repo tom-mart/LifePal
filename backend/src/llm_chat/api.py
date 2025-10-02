@@ -86,6 +86,14 @@ def send_message(request, data: ChatRequestSchema = None, file: UploadedFile = N
             user=user,
             title=title
         )
+        
+        # Add system message with user context ONLY for new conversations
+        prompt_manager = PromptManager(user=user)
+        Message.objects.create(
+            conversation=conversation,
+            role='system',
+            content=prompt_manager.get_system_prompt(include_user_context=True)
+        )
     
     # Save user message
     user_message_obj = Message.objects.create(
@@ -116,15 +124,8 @@ def send_message(request, data: ChatRequestSchema = None, file: UploadedFile = N
     # Get conversation history for context
     messages = []
     
-    # Add system message with user context using PromptManager
-    prompt_manager = PromptManager(user=user)
-    messages.append({
-        'role': 'system',
-        'content': prompt_manager.get_system_prompt(include_user_context=True)
-    })
-    
-    # Add conversation history (limited to last 10 messages)
-    previous_messages = conversation.get_messages().exclude(id=user_message_obj.id).order_by('-created_at')[:10][::-1]
+    # Add ALL conversation history (including system message from conversation start)
+    previous_messages = conversation.get_messages().exclude(id=user_message_obj.id)
     for msg in previous_messages:
         messages.append({
             'role': msg.role,
@@ -271,6 +272,14 @@ def send_message_stream(request, data: ChatRequestSchema):
             user=user,
             title=title
         )
+        
+        # Add system message with user context ONLY for new conversations
+        prompt_manager = PromptManager(user=user)
+        Message.objects.create(
+            conversation=conversation,
+            role='system',
+            content=prompt_manager.get_system_prompt(include_user_context=True)
+        )
     
     # Save user message
     user_message_obj = Message.objects.create(
@@ -282,14 +291,8 @@ def send_message_stream(request, data: ChatRequestSchema):
     # Get conversation history for context
     messages = []
     
-    # Add system message with user context using PromptManager
-    prompt_manager = PromptManager(user=user)
-    messages.append({
-        'role': 'system',
-        'content': prompt_manager.get_system_prompt(include_user_context=True)
-    })
-    
-    previous_messages = conversation.get_messages().exclude(id=user_message_obj.id).order_by('-created_at')[:10][::-1]
+    # Add ALL conversation history (including system message from conversation start)
+    previous_messages = conversation.get_messages().exclude(id=user_message_obj.id)
     for msg in previous_messages:
         messages.append({
             'role': msg.role,

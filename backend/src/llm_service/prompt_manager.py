@@ -44,17 +44,26 @@ Always respond with warmth and understanding. Use markdown formatting for better
             if hasattr(user, 'llmcontextprofile'):
                 self.context_profile = user.llmcontextprofile
     
-    def get_system_prompt(self, include_user_context: bool = True) -> str:
+    def get_system_prompt(self, include_user_context: bool = True, include_dynamic_context: bool = True) -> str:
         """Generate system prompt with optional user context.
         
         Args:
             include_user_context: Whether to include user profile information in the prompt.
+            include_dynamic_context: Whether to include dynamic context (date, time, etc.)
             
         Returns:
             Complete system prompt string.
         """
         prompt = self.BASE_SYSTEM_PROMPT
         
+        # Add dynamic context (date, time, etc.)
+        if include_dynamic_context:
+            dynamic_context = self._build_dynamic_context()
+            if dynamic_context:
+                prompt += "\n\n=== CURRENT CONTEXT ===\n"
+                prompt += dynamic_context
+        
+        # Add user profile context
         if include_user_context and (self.user_profile or self.context_profile):
             user_context = self._build_user_context()
             if user_context:
@@ -62,6 +71,51 @@ Always respond with warmth and understanding. Use markdown formatting for better
                 prompt += user_context
         
         return prompt
+    
+    def _build_dynamic_context(self) -> str:
+        """Build dynamic context (date, time, location, etc.).
+        
+        Returns:
+            Formatted dynamic context string.
+        """
+        from django.utils import timezone as django_timezone
+        from datetime import timezone as dt_timezone
+        import zoneinfo
+        
+        context_parts = []
+        
+        # Get user's timezone if available
+        tz = dt_timezone.utc
+        if self.user and hasattr(self.user, 'usersettings'):
+            try:
+                tz = zoneinfo.ZoneInfo(self.user.usersettings.timezone)
+            except:
+                pass
+        
+        now = django_timezone.now().astimezone(tz)
+        
+        # Date and time information
+        context_parts.append(f"Today's Date: {now.strftime('%A, %B %d, %Y')}")
+        context_parts.append(f"Current Time: {now.strftime('%I:%M %p')}")
+        
+        return "\n".join(context_parts) if context_parts else ""
+    
+    def _get_weather_info(self) -> Optional[str]:
+        """Get weather information for user's location (optional feature).
+        
+        Returns:
+            Weather description string or None
+        """
+        # Placeholder for weather API integration
+        # You can integrate with OpenWeatherMap, WeatherAPI, etc.
+        # Example:
+        # if self.context_profile and self.context_profile.location:
+        #     try:
+        #         # Call weather API with location
+        #         return "Sunny, 22°C"
+        #     except:
+        #         pass
+        return None
     
     def _build_user_context(self) -> str:
         """Build user context string from UserProfile and LLMContextProfile.
@@ -123,6 +177,7 @@ Always respond with warmth and understanding. Use markdown formatting for better
             ("Age", self.context_profile.age),
             ("Gender", self.context_profile.gender),
             ("Ethnic Background", self.context_profile.ethnic_background),
+            ("Location", self.context_profile.location),
             ("Occupation", self.context_profile.occupation),
             ("Relationship Status", self.context_profile.relationship_status),
             ("Living Situation", self.context_profile.living_situation),

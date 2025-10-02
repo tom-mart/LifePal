@@ -75,3 +75,17 @@ Thumbs.db
 *.bak
 *.tmp
 
+ssl/
+
+# Local override files (keep example files in git)
+docker-compose.override.yml
+.env
+.env.local
+
+# Don't ignore these - they're needed for deployment
+!docker-compose.yml
+!Dockerfile
+!Dockerfile.prod
+!.dockerignore
+!nginx.conf
+!deploy.sh
