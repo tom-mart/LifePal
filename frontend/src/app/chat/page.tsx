@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { apiClient } from '@/lib/api';
 import LifePalLogo from '@/components/LifePalLogo';
+import MarkdownMessage from '@/components/MarkdownMessage';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
 interface Message {
   id: string;
@@ -418,41 +420,29 @@ export default function ChatPage() {
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 pb-0">
           {messages.length === 0 && !isStreaming ? (
-            <div className="flex flex-col items-center justify-center h-full text-center max-w-2xl mx-auto px-4">
-              <div className="mb-6">
-                <LifePalLogo size="4xl" variant="default" animated={true} />
+            <div className="flex flex-col items-center justify-center h-full text-center max-w-2xl mx-auto px-4 pt-8">
+              <div className="mb-8 mt-4">
+                <LifePalLogo size="4xl" variant="simple" animated={true} />
               </div>
-              <h2 className="text-2xl font-bold mb-4">Welcome to LifePal!</h2>
-              <p className="text-base-content/70 mb-8">Your AI-powered life assistant is here to help you organize your thoughts, track your mood, and support your wellbeing journey.</p>
+              <h2 className="text-2xl font-bold mb-3">Welcome to LifePal!</h2>
+              <p className="text-base-content/70 mb-6">Your AI-powered life assistant is here to help you organize your thoughts, track your mood, and support your wellbeing journey.</p>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-lg">
-                <div className="card bg-base-100 shadow-sm border border-base-200">
-                  <div className="card-body p-4">
-                    <div className="text-2xl mb-2">📝</div>
-                    <h3 className="font-semibold text-sm">Write & Reflect</h3>
-                    <p className="text-xs text-base-content/60">Share your thoughts and get personalized insights</p>
-                  </div>
+              <div className="flex flex-wrap gap-3 justify-center w-full max-w-md">
+                <div className="badge badge-lg gap-2 py-4 px-4">
+                  <span className="text-lg">📝</span>
+                  <span className="text-sm">Write & Reflect</span>
                 </div>
-                <div className="card bg-base-100 shadow-sm border border-base-200">
-                  <div className="card-body p-4">
-                    <div className="text-2xl mb-2">💭</div>
-                    <h3 className="font-semibold text-sm">Daily Check-ins</h3>
-                    <p className="text-xs text-base-content/60">Track your mood and wellbeing over time</p>
-                  </div>
+                <div className="badge badge-lg gap-2 py-4 px-4">
+                  <span className="text-lg">💭</span>
+                  <span className="text-sm">Daily Check-ins</span>
                 </div>
-                <div className="card bg-base-100 shadow-sm border border-base-200">
-                  <div className="card-body p-4">
-                    <div className="text-2xl mb-2">🎯</div>
-                    <h3 className="font-semibold text-sm">Goal Setting</h3>
-                    <p className="text-xs text-base-content/60">Set and track your personal goals</p>
-                  </div>
+                <div className="badge badge-lg gap-2 py-4 px-4">
+                  <span className="text-lg">🎯</span>
+                  <span className="text-sm">Goal Setting</span>
                 </div>
-                <div className="card bg-base-100 shadow-sm border border-base-200">
-                  <div className="card-body p-4">
-                    <div className="text-2xl mb-2">💬</div>
-                    <h3 className="font-semibold text-sm">Chat & Support</h3>
-                    <p className="text-xs text-base-content/60">Get support and guidance anytime</p>
-                  </div>
+                <div className="badge badge-lg gap-2 py-4 px-4">
+                  <span className="text-lg">💬</span>
+                  <span className="text-sm">Chat & Support</span>
                 </div>
               </div>
             </div>
@@ -482,7 +472,10 @@ export default function ChatPage() {
                         : 'bg-base-100 border border-base-200 rounded-bl-md'
                     }`}>
                       {message.content ? (
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        <MarkdownMessage 
+                          content={message.content} 
+                          isUser={message.role === 'user'}
+                        />
                       ) : (
                         isStreaming && index === messages.length - 1 && (
                           <div className="flex items-center space-x-1 text-base-content/50">
@@ -542,6 +535,9 @@ export default function ChatPage() {
           onClick={() => setSidebarOpen(false)}
         />
       )}
+
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
     </div>
   );
 }

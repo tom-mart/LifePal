@@ -62,7 +62,17 @@ class TaskDetector(BaseDetector):
                 flags=re.IGNORECASE
             ).strip()
         
-        params['title'] = title if title else content
+        # Remove time and date information from title to get clean task name
+        clean_title = title
+        
+        # Remove time patterns (e.g., "at 5pm", "at 3:30pm", "5 pm")
+        clean_title = re.sub(r'\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM)\b', '', clean_title, flags=re.IGNORECASE)
+        clean_title = re.sub(r'\s+\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM)\b', '', clean_title, flags=re.IGNORECASE)
+        
+        # Remove date keywords from title
+        clean_title = re.sub(r'\s+(?:today|tomorrow|this\s+week|next\s+week)\b', '', clean_title, flags=re.IGNORECASE)
+        
+        params['title'] = clean_title.strip() if clean_title.strip() else content
         
         # Extract priority
         if re.search(r'\b(high|urgent|important)\b', content, re.IGNORECASE):
@@ -81,6 +91,21 @@ class TaskDetector(BaseDetector):
             params['due_date_keyword'] = 'this_week'
         elif re.search(r'\bnext week\b', content, re.IGNORECASE):
             params['due_date_keyword'] = 'next_week'
+        
+        # Extract specific time (e.g., "5pm", "3:30pm", "10 am")
+        time_match = re.search(r'\b(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)\b', content)
+        if time_match:
+            hour = int(time_match.group(1))
+            minute = int(time_match.group(2)) if time_match.group(2) else 0
+            period = time_match.group(3).lower()
+            
+            # Convert to 24-hour format
+            if period == 'pm' and hour != 12:
+                hour += 12
+            elif period == 'am' and hour == 12:
+                hour = 0
+            
+            params['due_time'] = {'hour': hour, 'minute': minute}
         
         return params
     

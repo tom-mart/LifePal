@@ -152,7 +152,12 @@ def send_message(request, data: ChatRequestSchema = None, file: UploadedFile = N
     else:
         # Otherwise get response from Ollama
         try:
-            response_content = get_ollama_client().chat(messages, user=user)
+            # Get user's preferred model from AI Identity Profile
+            model = None
+            if user and hasattr(user, 'ai_identity'):
+                model = user.ai_identity.preferred_model
+            
+            response_content = get_ollama_client().chat(messages, user=user, model=model)
         except Exception as e:
             response_content = f"I'm sorry, I'm having trouble connecting to my brain. Please try again later."
     
@@ -358,8 +363,13 @@ def send_message_stream(request, data: ChatRequestSchema):
             
             full_content = ""
             try:
+                # Get user's preferred model from AI Identity Profile
+                model = None
+                if user and hasattr(user, 'ai_identity'):
+                    model = user.ai_identity.preferred_model
+                
                 # Stream the response from Ollama
-                for content_chunk in get_ollama_client().chat_stream(messages, user=user):
+                for content_chunk in get_ollama_client().chat_stream(messages, user=user, model=model):
                     full_content += content_chunk
                     yield json.dumps({'type': 'content', 'content': content_chunk}) + '\n'
             except Exception as e:

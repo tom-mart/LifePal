@@ -1,0 +1,20 @@
+{
+  "name": "LifePal - Your AI Life Assistant",
+  "short_name": "LifePal",
+  "description": "Your AI-powered life assistant to help organize thoughts, track mood, and support your wellbeing journey",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#570df8",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/LifePal-Main-TransparentBG.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "lifestyle", "health"],
+  "screenshots": []
+}

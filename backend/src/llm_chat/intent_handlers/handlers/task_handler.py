@@ -51,6 +51,7 @@ class TaskHandler(BaseHandler):
             title = parameters.get('title', parameters.get('content', ''))
             priority = parameters.get('priority', 2)
             due_date_keyword = parameters.get('due_date_keyword')
+            due_time = parameters.get('due_time')  # {'hour': 17, 'minute': 0}
             
             # Validate title
             if not title or len(title.strip()) < 3:
@@ -62,7 +63,7 @@ class TaskHandler(BaseHandler):
             # Calculate due date
             due_date = None
             if due_date_keyword:
-                due_date = self._parse_due_date_keyword(due_date_keyword)
+                due_date = self._parse_due_date_keyword(due_date_keyword, due_time)
             
             # Create task
             task = Task.objects.create(
@@ -75,7 +76,13 @@ class TaskHandler(BaseHandler):
             
             # Format response
             priority_text = {1: 'low', 2: 'medium', 3: 'high', 4: 'urgent'}.get(priority, 'medium')
-            due_text = f" due {due_date.strftime('%B %d')}" if due_date else ""
+            if due_date:
+                if due_time:
+                    due_text = f" due {due_date.strftime('%B %d at %-I:%M %p')}"
+                else:
+                    due_text = f" due {due_date.strftime('%B %d')}"
+            else:
+                due_text = ""
             
             message = (
                 f"✅ I've created a new task for you:\n\n"
@@ -248,19 +255,33 @@ class TaskHandler(BaseHandler):
             message="To delete a task, please tell me which task you'd like to remove."
         )
     
-    def _parse_due_date_keyword(self, keyword: str) -> Optional[timezone.datetime]:
-        """Parse due date keyword into datetime"""
+    def _parse_due_date_keyword(self, keyword: str, due_time: Optional[Dict[str, int]] = None) -> Optional[timezone.datetime]:
+        """Parse due date keyword into datetime with optional specific time"""
         now = timezone.now()
         
+        # Determine the base date
         if keyword == 'today':
-            return now.replace(hour=23, minute=59, second=59)
+            base_date = now
         elif keyword == 'tomorrow':
-            return (now + timedelta(days=1)).replace(hour=23, minute=59, second=59)
+            base_date = now + timedelta(days=1)
         elif keyword == 'this_week':
             days_until_sunday = (6 - now.weekday()) % 7
-            return (now + timedelta(days=days_until_sunday)).replace(hour=23, minute=59, second=59)
+            base_date = now + timedelta(days=days_until_sunday)
         elif keyword == 'next_week':
             days_until_next_sunday = ((6 - now.weekday()) % 7) + 7
-            return (now + timedelta(days=days_until_next_sunday)).replace(hour=23, minute=59, second=59)
+            base_date = now + timedelta(days=days_until_next_sunday)
+        else:
+            return None
+        
+        # Apply specific time if provided, otherwise use end of day
+        if due_time:
+            return base_date.replace(
+                hour=due_time['hour'],
+                minute=due_time['minute'],
+                second=0,
+                microsecond=0
+            )
+        else:
+            return base_date.replace(hour=23, minute=59, second=59, microsecond=0)
         
         return None

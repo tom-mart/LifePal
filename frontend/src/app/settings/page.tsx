@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
 import SettingsLayout from '@/components/SettingsLayout';
+import PushNotificationManager from '@/components/PushNotificationManager';
 
 interface UserSettings {
   id: string;
@@ -26,6 +27,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [vapidPublicKey, setVapidPublicKey] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -34,6 +36,11 @@ export default function SettingsPage() {
       loadSettings();
     }
   }, [user, authLoading, router]);
+
+  useEffect(() => {
+    // Get environment variables
+    setVapidPublicKey(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '');
+  }, []);
 
   const loadSettings = async () => {
     try {
@@ -174,7 +181,7 @@ export default function SettingsPage() {
             <div>
               <h2 className="text-2xl font-bold mb-4">Notifications</h2>
               
-              <div className="form-control">
+              <div className="form-control mb-6">
                 <label className="label cursor-pointer">
                   <span className="label-text font-semibold">Email Notifications</span>
                   <input
@@ -191,21 +198,29 @@ export default function SettingsPage() {
                 </label>
               </div>
 
-              <div className="form-control">
-                <label className="label cursor-pointer">
-                  <span className="label-text font-semibold">Push Notifications</span>
-                  <input
-                    type="checkbox"
-                    className="toggle toggle-primary"
-                    checked={settings.push_notifications}
-                    onChange={(e) => setSettings({ ...settings, push_notifications: e.target.checked })}
-                  />
-                </label>
-                <label className="label">
-                  <span className="label-text-alt text-base-content/60">
-                    Receive push notifications on your device
-                  </span>
-                </label>
+              {/* Push Notifications Section */}
+              <div className="mt-4">
+                <h3 className="text-lg font-semibold mb-3">Push Notifications</h3>
+                {!vapidPublicKey ? (
+                  <div className="alert alert-warning">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="stroke-current shrink-0 h-6 w-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                    <span>VAPID public key is not configured. Push notifications will not work.</span>
+                  </div>
+                ) : (
+                  <PushNotificationManager vapidPublicKey={vapidPublicKey} />
+                )}
               </div>
             </div>
 
