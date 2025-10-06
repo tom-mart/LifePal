@@ -1,13 +1,19 @@
 from django.db import models
-from encrypted_model_fields.fields import EncryptedCharField, EncryptedTextField, EncryptedDateField
 import uuid
 from datetime import date
 
 class UserProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField('auth.User', on_delete=models.CASCADE)
-    preferred_name = EncryptedCharField(max_length=255, blank=True, null=True)
-    bio = EncryptedTextField(blank=True, null=True)
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='userprofile')
+    preferred_name = models.CharField(max_length=255, blank=True, null=True)
+    bio = models.TextField(blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'User Profile'
+        verbose_name_plural = 'User Profiles'
 
     def __str__(self):
         # Try to get preferred_name from UserProfile, then fall back to email
@@ -20,9 +26,9 @@ class UserProfile(models.Model):
 
 class UserSettings(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField('auth.User', on_delete=models.CASCADE)
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='usersettings')
 
-    timezone = models.CharField(max_length=30, default='Europe/London')
+    timezone = models.CharField(max_length=50, default='Europe/London')
     
     # UI preferences
     theme = models.CharField(max_length=20, default='light', choices=[
@@ -42,6 +48,13 @@ class UserSettings(models.Model):
     # Usage statistics
     last_active = models.DateTimeField(null=True, blank=True)
     login_count = models.PositiveIntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'User Settings'
+        verbose_name_plural = 'User Settings'
 
     def __str__(self):
         # Try to get preferred_name from UserProfile, then fall back to email
@@ -53,65 +66,80 @@ class UserSettings(models.Model):
             return f"Settings for {getattr(self.user, 'email', 'Unknown User')}"
 
 class LLMContextProfile(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField('auth.User', on_delete=models.CASCADE)
-
-    date_of_birth = EncryptedDateField(blank=True, null=True, help_text="User's date of birth")
-    gender = EncryptedCharField(max_length=50, blank=True, null=True)
-    ethnic_background = EncryptedCharField(max_length=255, blank=True, null=True)
+    """User context information for LLM personalization.
     
-    occupation = EncryptedCharField(max_length=100, blank=True, null=True)
-    relationship_status = EncryptedCharField(max_length=100, blank=True, null=True)
-    living_situation = EncryptedCharField(max_length=100, blank=True, null=True,
+    Note: Sensitive data should be protected at the infrastructure level
+    (database encryption, access controls, HTTPS, etc.) rather than
+    field-level encryption which doesn't prevent admin access.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='llm_context')
+
+    # Demographics
+    date_of_birth = models.DateField(blank=True, null=True, help_text="User's date of birth")
+    gender = models.CharField(max_length=50, blank=True, null=True)
+    ethnic_background = models.CharField(max_length=255, blank=True, null=True)
+    
+    # Life Context
+    occupation = models.CharField(max_length=100, blank=True, null=True)
+    relationship_status = models.CharField(max_length=100, blank=True, null=True)
+    living_situation = models.CharField(max_length=100, blank=True, null=True,
                                       help_text="E.g., 'Lives alone', 'With family', 'Shared housing'")
-    location = EncryptedCharField(max_length=255, blank=True, null=True,
+    location = models.CharField(max_length=255, blank=True, null=True,
                                   help_text="User's location (city, country)")
-    has_children = models.BooleanField(null=True, blank=True)  # Not encrypted as it's a boolean
-    children_info = EncryptedTextField(blank=True, null=True,
+    has_children = models.BooleanField(null=True, blank=True)
+    children_info = models.TextField(blank=True, null=True,
                                    help_text="Brief info about children if applicable")
     
-    # Wellbeing Context - Highly sensitive fields (encrypted)
-    health_conditions = EncryptedTextField(blank=True, null=True,
+    # Wellbeing Context - Sensitive fields
+    health_conditions = models.TextField(blank=True, null=True,
                                       help_text="Any health conditions the user wishes to disclose")
-    mental_health_history = EncryptedTextField(blank=True, null=True)
-    current_challenges = EncryptedTextField(blank=True, null=True,
+    mental_health_history = models.TextField(blank=True, null=True)
+    current_challenges = models.TextField(blank=True, null=True,
                                        help_text="Current life challenges the user is facing")
-    stress_factors = EncryptedTextField(blank=True, null=True)
-    coping_mechanisms = EncryptedTextField(blank=True, null=True,
+    stress_factors = models.TextField(blank=True, null=True)
+    coping_mechanisms = models.TextField(blank=True, null=True,
                                       help_text="What helps the user cope with stress")
     
-    # Preferences - Less sensitive fields
+    # Preferences
     communication_style = models.CharField(max_length=50, blank=True, null=True,
                                         help_text="E.g., 'Direct', 'Supportive', 'Analytical'")
     learning_style = models.CharField(max_length=50, blank=True, null=True)
     response_preferences = models.TextField(blank=True, null=True,
                                          help_text="How the user prefers responses (length, tone, etc.)")
     
-    # Goals and Values - Sensitive fields (encrypted)
-    personal_goals = EncryptedTextField(blank=True, null=True)
-    professional_goals = EncryptedTextField(blank=True, null=True)
-    core_values = EncryptedTextField(blank=True, null=True)
-    interests = EncryptedTextField(blank=True, null=True)
+    # Goals and Values
+    personal_goals = models.TextField(blank=True, null=True)
+    professional_goals = models.TextField(blank=True, null=True)
+    core_values = models.TextField(blank=True, null=True)
+    interests = models.TextField(blank=True, null=True)
     
-    # Daily Routine - Sensitive fields (encrypted)
-    typical_schedule = EncryptedTextField(blank=True, null=True,
+    # Daily Routine
+    typical_schedule = models.TextField(blank=True, null=True,
                                      help_text="Overview of user's typical daily schedule")
-    sleep_pattern = EncryptedCharField(max_length=100, blank=True, null=True)
+    sleep_pattern = models.CharField(max_length=100, blank=True, null=True)
     
-    # Support System - Sensitive fields (encrypted)
-    support_network = EncryptedTextField(blank=True, null=True,
+    # Support System
+    support_network = models.TextField(blank=True, null=True,
                                     help_text="Description of user's support network")
-    professional_support = EncryptedTextField(blank=True, null=True,
+    professional_support = models.TextField(blank=True, null=True,
                                          help_text="Any professional support the user receives")
     
-    # Preferences for LifePal - Sensitive fields (encrypted)
-    lifepal_usage_goals = EncryptedTextField(blank=True, null=True,
+    # Preferences for LifePal
+    lifepal_usage_goals = models.TextField(blank=True, null=True,
                                         help_text="What the user hopes to achieve using LifePal")
-    topics_of_interest = EncryptedTextField(blank=True, null=True)
-    topics_to_avoid = EncryptedTextField(blank=True, null=True)
+    topics_of_interest = models.TextField(blank=True, null=True)
+    topics_to_avoid = models.TextField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'LLM Context Profile'
+        verbose_name_plural = 'LLM Context Profiles'
+        indexes = [
+            models.Index(fields=['user']),
+        ]
 
     @property
     def age(self):
@@ -149,8 +177,8 @@ class AIIdentityProfile(models.Model):
     # Model Selection
     preferred_model = models.CharField(
         max_length=100,
-        default='gemma3:latest',
-        help_text="Ollama model to use (e.g., gemma3:latest, llama3.2:latest)"
+        default='llama3.2:latest',
+        help_text="Ollama model to use (e.g., llama3.2:latest, mistral:latest)"
     )
     
     # AI Identity/Personality

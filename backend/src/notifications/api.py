@@ -4,15 +4,22 @@ from django.shortcuts import get_object_or_404
 from typing import List
 import os
 import json
+import logging
 from pywebpush import webpush, WebPushException
 
-from .models import PushSubscription
+logger = logging.getLogger(__name__)
+
+from .models import PushSubscription, ScheduledNotification
 from .schemas import (
     PushSubscriptionSchema,
     PushSubscriptionResponseSchema,
     SendPushNotificationSchema,
     VAPIDPublicKeySchema,
-    TestNotificationSchema
+    TestNotificationSchema,
+    CreateScheduledNotificationSchema,
+    UpdateScheduledNotificationSchema,
+    ScheduledNotificationResponseSchema,
+    SnoozeNotificationSchema
 )
 
 router = Router()
@@ -153,7 +160,14 @@ def send_test_notification(request, payload: TestNotificationSchema):
                     },
                     data=json.dumps(notification_data),
                     vapid_private_key=vapid_private_key,
-                    vapid_claims=vapid_claims
+                    vapid_claims=vapid_claims,
+                    # Add TTL (Time To Live) - notification expires after 12 hours
+                    ttl=43200,
+                    # Set urgency to 'high' for test notifications
+                    headers={
+                        "Urgency": "high",
+                        "Topic": "test-notification"
+                    }
                 )
                 success_count += 1
                 subscription.save()  # Update last_used timestamp
@@ -174,11 +188,24 @@ def send_test_notification(request, payload: TestNotificationSchema):
         return 500, {"error": str(e)}
 
 
-def send_push_notification_to_user(user, title, body, icon=None, url=None, tag=None):
+def send_push_notification_to_user(user, title, body, icon=None, url=None, tag=None, actions=None, data=None):
     """
     Helper function to send push notifications to a user.
     Can be called from other parts of the application.
+    
+    Args:
+        user: User object
+        title: Notification title
+        body: Notification body
+        icon: Icon URL
+        url: URL to open when clicked
+        tag: Notification tag
+        actions: List of action buttons (e.g., [{"action": "snooze", "title": "Snooze 30min"}])
+        data: Additional data to pass to the notification
     """
+    import sys
+    print(f"[PUSH] send_push_notification_to_user called for {user.username}: {title}", file=sys.stderr, flush=True)
+    logger.info(f"send_push_notification_to_user called for {user.username}: {title}")
     try:
         vapid_private_key = os.environ.get('VAPID_PRIVATE_KEY')
         vapid_claims = {
@@ -186,6 +213,7 @@ def send_push_notification_to_user(user, title, body, icon=None, url=None, tag=N
         }
         
         if not vapid_private_key:
+            logger.error("VAPID_PRIVATE_KEY not set!")
             return False
         
         subscriptions = PushSubscription.objects.filter(
@@ -193,7 +221,12 @@ def send_push_notification_to_user(user, title, body, icon=None, url=None, tag=N
             is_active=True
         )
         
+        sub_count = subscriptions.count()
+        print(f"[PUSH] Found {sub_count} active subscriptions for {user.username}", file=sys.stderr, flush=True)
+        logger.info(f"Found {sub_count} active subscriptions for {user.username}")
+        
         success = False
+        failed_count = 0
         for subscription in subscriptions:
             try:
                 notification_data = {
@@ -202,8 +235,27 @@ def send_push_notification_to_user(user, title, body, icon=None, url=None, tag=N
                     "icon": icon or "/web-app-manifest-192x192.png",
                     "badge": "/favicon-96x96.png",
                     "tag": tag or "notification",
-                    "url": url or "/"
+                    "url": url or "/",
+                    "requireInteraction": bool(actions),  # Keep notification visible if there are actions
                 }
+                
+                if actions:
+                    notification_data["actions"] = actions
+                
+                if data:
+                    notification_data["data"] = data
+                
+                # Determine urgency based on notification type
+                urgency = "high"  # Default to high for scheduled notifications
+                ttl = 86400  # 24 hours default TTL - long enough to not miss notifications
+                
+                # Adjust based on notification type
+                if data and data.get('notificationType') == 'reminder':
+                    urgency = "high"
+                    ttl = 43200  # 12 hours for reminders - important but can wait
+                elif data and data.get('notificationType') == 'evening_wrapup':
+                    urgency = "normal"
+                    ttl = 28800  # 8 hours for wrap-ups - relevant for the evening
                 
                 webpush(
                     subscription_info={
@@ -215,15 +267,143 @@ def send_push_notification_to_user(user, title, body, icon=None, url=None, tag=N
                     },
                     data=json.dumps(notification_data),
                     vapid_private_key=vapid_private_key,
-                    vapid_claims=vapid_claims
+                    vapid_claims=vapid_claims,
+                    ttl=ttl,
+                    headers={
+                        "Urgency": urgency,
+                        "Topic": tag or "notification"
+                    }
                 )
                 success = True
+                print(f"[PUSH] Successfully sent to {user.username} via subscription {subscription.id}", file=sys.stderr, flush=True)
+                logger.info(f"Successfully sent push notification to {user.username} via subscription {subscription.id}")
                 subscription.save()
             except WebPushException as e:
+                failed_count += 1
+                status_code = e.response.status_code if e.response else 'unknown'
+                print(f"[PUSH] WebPush error for subscription {subscription.id}: status {status_code}", file=sys.stderr, flush=True)
                 if e.response and e.response.status_code in [404, 410]:
+                    logger.info(f"Subscription {subscription.id} expired (status {e.response.status_code}), marking inactive")
                     subscription.is_active = False
                     subscription.save()
+                else:
+                    logger.warning(f"WebPush error for subscription {subscription.id}: {e}")
+        
+        if not success and failed_count > 0:
+            print(f"[PUSH] FAILED: tried {failed_count} subscriptions for {user.username}, none succeeded", file=sys.stderr, flush=True)
+            logger.warning(f"Failed to send notification to {user.username}: tried {failed_count} subscriptions, none succeeded")
         
         return success
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error in send_push_notification_to_user: {str(e)}", exc_info=True)
         return False
+
+
+# ============================================================================
+# Scheduled Notifications API
+# ============================================================================
+
+@router.post("/scheduled", auth=JWTAuth(), response={201: ScheduledNotificationResponseSchema, 400: dict}, tags=["Scheduled Notifications"])
+def create_scheduled_notification(request, payload: CreateScheduledNotificationSchema):
+    """Create a new scheduled notification"""
+    try:
+        notification = ScheduledNotification.objects.create(
+            user=request.user,
+            notification_type=payload.notification_type,
+            title=payload.title,
+            body=payload.body,
+            scheduled_time=payload.scheduled_time,
+            icon=payload.icon,
+            url=payload.url,
+            tag=payload.tag,
+            snooze_duration_minutes=payload.snooze_duration_minutes,
+            max_snooze_count=payload.max_snooze_count,
+            is_recurring=payload.is_recurring,
+            recurrence_rule=payload.recurrence_rule,
+            metadata=payload.metadata or {}
+        )
+        
+        return 201, notification
+    except Exception as e:
+        return 400, {"error": str(e)}
+
+
+@router.get("/scheduled", auth=JWTAuth(), response=List[ScheduledNotificationResponseSchema], tags=["Scheduled Notifications"])
+def list_scheduled_notifications(request, status: str = None):
+    """List all scheduled notifications for the current user"""
+    notifications = ScheduledNotification.objects.filter(user=request.user)
+    
+    if status:
+        notifications = notifications.filter(status=status)
+    
+    return list(notifications)
+
+
+@router.get("/scheduled/{notification_id}", auth=JWTAuth(), response={200: ScheduledNotificationResponseSchema, 404: dict}, tags=["Scheduled Notifications"])
+def get_scheduled_notification(request, notification_id: str):
+    """Get a specific scheduled notification"""
+    try:
+        notification = ScheduledNotification.objects.get(
+            id=notification_id,
+            user=request.user
+        )
+        return 200, notification
+    except ScheduledNotification.DoesNotExist:
+        return 404, {"error": "Notification not found"}
+
+
+@router.patch("/scheduled/{notification_id}", auth=JWTAuth(), response={200: ScheduledNotificationResponseSchema, 404: dict, 400: dict}, tags=["Scheduled Notifications"])
+def update_scheduled_notification(request, notification_id: str, payload: UpdateScheduledNotificationSchema):
+    """Update a scheduled notification"""
+    try:
+        notification = ScheduledNotification.objects.get(
+            id=notification_id,
+            user=request.user
+        )
+        
+        # Only allow updates if notification is pending or snoozed
+        if notification.status not in ['pending', 'snoozed']:
+            return 400, {"error": "Cannot update notification with status: " + notification.status}
+        
+        # Update fields
+        update_data = payload.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(notification, field, value)
+        
+        notification.save()
+        return 200, notification
+    except ScheduledNotification.DoesNotExist:
+        return 404, {"error": "Notification not found"}
+
+
+@router.post("/scheduled/{notification_id}/snooze", auth=JWTAuth(), response={200: ScheduledNotificationResponseSchema, 404: dict, 400: dict}, tags=["Scheduled Notifications"])
+def snooze_notification(request, notification_id: str, payload: SnoozeNotificationSchema):
+    """Snooze a scheduled notification"""
+    try:
+        notification = ScheduledNotification.objects.get(
+            id=notification_id,
+            user=request.user
+        )
+        
+        success = notification.snooze(payload.duration_minutes)
+        
+        if not success:
+            return 400, {"error": "Maximum snooze count reached"}
+        
+        return 200, notification
+    except ScheduledNotification.DoesNotExist:
+        return 404, {"error": "Notification not found"}
+
+
+@router.delete("/scheduled/{notification_id}", auth=JWTAuth(), response={200: dict, 404: dict}, tags=["Scheduled Notifications"])
+def cancel_scheduled_notification(request, notification_id: str):
+    """Cancel a scheduled notification"""
+    try:
+        notification = ScheduledNotification.objects.get(
+            id=notification_id,
+            user=request.user
+        )
+        notification.cancel()
+        return 200, {"success": True, "message": "Notification cancelled"}
+    except ScheduledNotification.DoesNotExist:
+        return 404, {"error": "Notification not found"}

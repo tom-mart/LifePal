@@ -88,19 +88,25 @@ class DetectorRegistry:
     
     def auto_discover(self):
         """
-        Auto-discover and register all available detectors.
-        
-        This method imports all detector modules and registers them automatically.
+        Auto-discover and register all available intent detectors.
         """
         try:
-            from .detectors import TaskDetector
-            self.register(TaskDetector())
-            logger.info("Auto-discovery complete")
+            from .detectors.reminder_detector import ReminderDetector
+            from .detectors.task_detector import TaskDetector
+
+            # List of all available intent detectors. Order can matter.
+            # ReminderDetector is placed first as it's more specific than TaskDetector.
+            DETECTORS = [
+                ReminderDetector,
+                TaskDetector,
+            ]
+
+            for detector_class in DETECTORS:
+                self.register(detector_class())
+            
+            logger.info("Detector auto-discovery complete")
         except ImportError as e:
             logger.warning(f"Could not import some detectors during auto-discovery: {e}")
-
-
-# Global registry instance
 _registry = None
 
 

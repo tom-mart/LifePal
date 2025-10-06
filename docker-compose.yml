@@ -78,6 +78,9 @@ services:
       - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
+      - DJANGO_SUPERUSER_USERNAME=administrator@lifepal.app
+      - DJANGO_SUPERUSER_EMAIL=administrator@lifepal.app
+      - DJANGO_SUPERUSER_PASSWORD=insane#4LifePal
     volumes:
       - media_files:/app/media
       - static_files:/app/staticfiles
@@ -130,6 +133,8 @@ services:
       dockerfile: Dockerfile
     container_name: lifepal_celery_worker
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - DEBUG=False
       - DATABASE_URL=postgresql://lifepal:${DB_PASSWORD:-changeme}@db:5432/lifepal
@@ -137,7 +142,7 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://192.168.1.21:11434}
-      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-gemma3:latest}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-llama3.2:latest}
       - SECRET_KEY=${SECRET_KEY:-django-insecure-change-this-in-production}
       - FIELD_ENCRYPTION_KEY=${FIELD_ENCRYPTION_KEY}
     volumes:
@@ -160,6 +165,8 @@ services:
       dockerfile: Dockerfile
     container_name: lifepal_celery_beat
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - DEBUG=False
       - DATABASE_URL=postgresql://lifepal:${DB_PASSWORD:-changeme}@db:5432/lifepal
@@ -167,7 +174,7 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://192.168.1.21:11434}
-      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-gemma3:latest}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-llama3.2:latest}
       - SECRET_KEY=${SECRET_KEY:-django-insecure-change-this-in-production}
       - FIELD_ENCRYPTION_KEY=${FIELD_ENCRYPTION_KEY}
     volumes:

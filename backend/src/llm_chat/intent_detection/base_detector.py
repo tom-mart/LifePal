@@ -34,7 +34,8 @@ class BaseDetector:
     """
     
     # Override in subclasses
-    INTENT_PATTERNS: Dict[str, str] = {}
+    # Can be either a dict or list of tuples for ordered patterns
+    INTENT_PATTERNS = {}
     DETECTOR_NAME: str = "base"
     
     def detect(self, content: str, context: Dict[str, Any] = None) -> List[IntentResult]:
@@ -50,9 +51,11 @@ class BaseDetector:
         """
         results = []
         
-        # Rule-based detection
-        for intent_type, pattern in self.INTENT_PATTERNS.items():
-            matches = re.findall(pattern, content)
+        # Rule-based detection - handle both dict and list formats
+        patterns_iter = self.INTENT_PATTERNS.items() if isinstance(self.INTENT_PATTERNS, dict) else self.INTENT_PATTERNS
+        
+        for intent_type, pattern in patterns_iter:
+            matches = re.findall(pattern, content.lower(), re.IGNORECASE)
             if matches:
                 confidence = self._calculate_confidence(content, matches)
                 parameters = self._extract_parameters(content, intent_type, matches)
@@ -119,4 +122,9 @@ class BaseDetector:
     
     def get_supported_intents(self) -> List[str]:
         """Get list of intent types this detector supports"""
-        return list(self.INTENT_PATTERNS.keys())
+        if isinstance(self.INTENT_PATTERNS, dict):
+            return list(self.INTENT_PATTERNS.keys())
+        elif isinstance(self.INTENT_PATTERNS, list):
+            # List of tuples: [(intent_type, pattern), ...]
+            return [intent_type for intent_type, _ in self.INTENT_PATTERNS]
+        return []

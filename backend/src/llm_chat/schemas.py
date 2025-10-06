@@ -42,6 +42,7 @@ class ConversationSchema(Schema):
     #Schema for conversation
     id: UUID
     title: str
+    conversation_type: str
     created_at: datetime
     updated_at: datetime
 

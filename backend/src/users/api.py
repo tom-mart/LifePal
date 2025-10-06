@@ -27,34 +27,67 @@ router = Router()
 User = get_user_model()
 
 # Public endpoints (no auth required)
-@router.post("/register", response={201: dict, 403: dict}, tags=[" User Profile"])
+@router.post("/register", response={201: dict, 400: dict, 403: dict}, tags=[" User Profile"])
 def register_user(request, payload: UserRegistrationSchema):
+    """Register a new user with email as username."""
     # Check if registration is enabled (default: disabled in production)
     from django.conf import settings
     import os
+    import logging
     
+    logger = logging.getLogger(__name__)
     registration_enabled = os.environ.get('ALLOW_REGISTRATION', 'False') == 'True'
     
     if not registration_enabled:
         return 403, {"success": False, "message": "Registration is currently disabled"}
     
-    with transaction.atomic():
-        user = User.objects.create_user(
-            username=payload.username,
-            email=payload.username,
-            password=payload.password
-        )
+    # Validate email format (already done by EmailStr, but double-check)
+    email = payload.username.lower().strip()
+    
+    # Check if user already exists
+    if User.objects.filter(username=email).exists():
+        return 400, {"success": False, "message": "An account with this email already exists"}
+    
+    if User.objects.filter(email=email).exists():
+        return 400, {"success": False, "message": "An account with this email already exists"}
+    
+    # Validate password strength
+    if len(payload.password) < 8:
+        return 400, {"success": False, "message": "Password must be at least 8 characters long"}
+    
+    try:
+        with transaction.atomic():
+            # Create user with email as both username and email
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=payload.password,
+                first_name=payload.first_name or '',
+                last_name=payload.last_name or ''
+            )
+            
+            logger.info(f"Created new user: {email}")
 
-        llm_context_profile = LLMContextProfile.objects.create(user=user)
-        user_profile = UserProfile.objects.create(user=user)
-        user_settings = UserSettings.objects.create(user=user)
+            # Create related profiles
+            llm_context_profile = LLMContextProfile.objects.create(user=user)
+            user_profile = UserProfile.objects.create(user=user)
+            user_settings = UserSettings.objects.create(user=user)
+            ai_identity = AIIdentityProfile.objects.create(user=user)
+            
+            logger.info(f"Created profiles for user: {email}")
 
-    return 201, {"success": True,
-                    "id": user.id,
-                    "profile_id": llm_context_profile.id,
-                    "user_profile_id": user_profile.id,
-                    "user_settings_id": user_settings.id
-                }
+        return 201, {
+            "success": True,
+            "message": "Account created successfully",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username
+            }
+        }
+    except Exception as e:
+        logger.error(f"Registration error for {email}: {str(e)}", exc_info=True)
+        return 400, {"success": False, "message": f"Registration failed: {str(e)}"}
 
 @router.get("/profile", auth=JWTAuth(), response=UserProfileSchema, tags=[" User Profile"])
 def get_profile(request):

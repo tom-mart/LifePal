@@ -194,15 +194,19 @@ def send_message(request, data: ChatRequestSchema = None, file: UploadedFile = N
 
 @router.get('/conversations', response=ConversationListSchema)
 def list_conversations(request):
-    """List all conversations for the current user"""
+    """List all general conversations for the current user (excludes check-ins)"""
     user = request.auth
-    conversations = Conversation.objects.filter(user=user).order_by('-updated_at')
+    conversations = Conversation.objects.filter(
+        user=user, 
+        conversation_type='general'
+    ).order_by('-updated_at')
     
     return {
         'conversations': [
             {
                 'id': conv.id,
                 'title': conv.title or 'Untitled',
+                'conversation_type': conv.conversation_type,
                 'created_at': conv.created_at,
                 'updated_at': conv.updated_at
             }
@@ -317,44 +321,44 @@ def send_message_stream(request, data: ChatRequestSchema):
         if intent_data:
             pass  # Intent processed successfully
     
-    # If we have a specific response from the intent handler, use that
+    # If an intent was handled, stream the response back
     if intent_data and 'message' in intent_data:
-        # Create a simple streaming response for intent-based messages
-        def simple_stream():
+        # Create the assistant message BEFORE the generator to avoid DB issues
+        assistant_message = Message.objects.create(
+            conversation=conversation,
+            role='assistant',
+            content=intent_data['message']
+        )
+        
+        # Update conversation timestamp
+        conversation.save()
+        
+        # Prepare intent response for the 'end' event
+        intent_response = {
+            'response_type': intent_data.get('response_type'),
+            'data': intent_data
+        }
+        
+        def intent_stream_response():
+            # 1. Send start event
             yield json.dumps({'type': 'start', 'conversation_id': str(conversation.id)}) + '\n'
-            yield json.dumps({'type': 'content', 'content': intent_data['message']}) + '\n'
-            
-            # Save the message to the database
-            assistant_message = Message.objects.create(
-                conversation=conversation,
-                role='assistant',
-                content=intent_data['message']
-            )
-            
-            # Prepare intent response
-            intent_response = None
-            if intent_data:
-                intent_response = {
-                    'response_type': intent_data.get('response_type'),
-                    'data': intent_data
-                }
-            
-            # Send the final message with metadata
+
+            # 2. Send content
+            yield json.dumps({'type': 'content', 'content': assistant_message.content}) + '\n'
+
+            # 3. Send end event with final message data
             yield json.dumps({
                 'type': 'end',
                 'message': {
                     'id': str(assistant_message.id),
                     'role': assistant_message.role,
                     'content': assistant_message.content,
-                    'created_at': assistant_message.created_at.isoformat()
+                    'created_at': assistant_message.created_at.isoformat(),
                 },
                 'intent': intent_response
             }) + '\n'
-            
-            # Update conversation timestamp
-            conversation.save()
-            
-        return StreamingHttpResponse(simple_stream(), content_type='application/x-ndjson')
+
+        return StreamingHttpResponse(intent_stream_response(), content_type='application/x-ndjson')
     else:
         # Otherwise get streaming response from Ollama
         def stream_response():

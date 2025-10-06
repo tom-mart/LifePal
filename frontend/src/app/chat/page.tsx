@@ -19,6 +19,7 @@ interface Message {
 interface Conversation {
   id: string;
   title: string;
+  conversation_type: 'general' | 'checkin';
   created_at: string;
   updated_at: string;
 }

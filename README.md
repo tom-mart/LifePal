@@ -1,17 +1,31 @@
 # LifePal - Your AI-Powered Personal Assistant
 
 ## 🚀 Overview
-LifePal is an intelligent wellness companion powered by Ollama that provides personalized AI assistance through natural language conversations. The application combines the power of large language models with user context to deliver empathetic, personalized support for daily life, mental wellness, and personal development.
+LifePal is an intelligent wellbeing companion powered by Ollama that provides personalized AI assistance through natural language conversations and structured wellbeing check-ins. The application combines the power of large language models with user context to deliver empathetic, personalized support for daily life, mental wellness, task management, and personal development.
 
 ## ✨ Features
 
 ### Current Features
-
 #### 🤖 AI Chat Assistant
 - **Personalized Conversations**: Context-aware AI powered by Ollama
 - **Real-time Streaming**: Live response streaming for natural interactions
-- **Conversation History**: Save and manage multiple chat conversations
+- **Conversation History**: Save and manage multiple chat conversations (general chats separate from check-ins)
 - **User Context Integration**: AI knows your preferences, goals, and background
+- **Intent Detection**: Automatic detection and handling of user intents (tasks, events, etc.)
+
+#### 🧘 Wellbeing Check-ins
+- **Scheduled Check-ins**: Morning catch-ups, midday check-ins, and evening reflections
+- **Dynamic Reminders**: LLM can create midday check-ins based on morning conversations
+- **Context-Aware Conversations**: Each check-in includes relevant user data (tasks, previous check-ins)
+- **Insight Extraction**: Structured insights saved from each check-in for analytics
+- **Action Tracking**: Track actions taken during check-ins (reminders created, tasks added)
+- **Daily Summaries**: Aggregate insights from all check-ins into daily wellbeing logs
+- **Emotion Tracking**: Assign and track emotions with intensity throughout the day
+
+#### ✅ Task Management
+- **Smart Todo Lists**: Create and manage tasks with priorities and due dates
+- **AI Integration**: LLM can create tasks during conversations
+- **Task Context**: Tasks appear in check-in contexts for better planning
 
 #### 👤 User Management
 - **Secure Authentication**: JWT-based authentication system
@@ -19,7 +33,9 @@ LifePal is an intelligent wellness companion powered by Ollama that provides per
 - **Profile Management**: Customize your preferred name and bio
 - **Settings Dashboard**: Control notifications, theme, timezone, and privacy
 
-#### 🧠 AI Context Profile
+#### 🧠 AI Identity & Context
+- **Customizable AI Identity**: Define AI name, role, personality, and communication style
+- **Model Selection**: Choose preferred Ollama model for conversations
 - **Personal Information**: Age, gender, occupation, relationship status
 - **Wellbeing Context**: Health conditions, mental health history, current challenges
 - **Goals & Values**: Personal and professional goals, core values, interests
@@ -42,13 +58,14 @@ LifePal is an intelligent wellness companion powered by Ollama that provides per
 - **Secure API**: Protected endpoints with authentication middleware
 
 ### Upcoming Features
-- **Diary Integration**: Journal entries with AI-powered insights
-- **Todo List Management**: AI-assisted task management
-- **Mood Tracking**: Track and analyze emotional wellbeing
-- **Goal Progress**: Track progress toward personal and professional goals
+- **Diary/Moments**: Journal entries with AI-powered insights
+- **Advanced Analytics**: Wellbeing trends, emotion patterns, and insights visualization
+- **Goal Progress Tracking**: Track progress toward personal and professional goals
 - **Relationship Management**: Manage connections and support network
 - **Voice Interface**: Voice-based interactions with the AI
 - **Mobile Apps**: Native iOS and Android applications
+- **Tool Calling**: LLM can call external tools (create tasks, set reminders, save moments)
+- **Custom Check-in Schedules**: User-defined check-in times and frequencies
 
 ## 🛠️ Tech Stack
 
@@ -77,9 +94,17 @@ LifePal is an intelligent wellness companion powered by Ollama that provides per
 
 ### Database Schema
 - **User Profiles** - Basic user information and preferences
+- **AI Identity Profiles** - Customizable AI personality and model selection
 - **LLM Context Profiles** - Detailed user context for AI personalization
 - **User Settings** - App preferences and privacy controls
-- **Conversations** - Chat history and message storage
+- **Conversations** - Chat history and message storage (separated by type: general/checkin)
+- **Messages** - Individual chat messages with role and content
+- **Intents** - Detected user intents with parameters
+- **Tasks** - Todo items with priorities, due dates, and categories
+- **Daily Logs** - Daily wellbeing summaries with emotions
+- **Check-ins** - Scheduled and ad-hoc wellbeing check-ins with insights
+- **Emotions** - Reference data for emotion tracking
+- **Moments** - User journal entries (future)
 - **Encrypted Fields** - Sensitive data protection
 
 ## 🚀 Getting Started
@@ -182,25 +207,60 @@ LifePal is an intelligent wellness companion powered by Ollama that provides per
 
 ### Getting Started
 1. **Register an account** at http://localhost:3000
-2. **Complete your AI Context Profile** (optional but recommended)
+2. **Customize your AI Identity** (optional)
+   - Navigate to Settings → AI Identity
+   - Define AI name, role, personality, and communication style
+   - Select your preferred Ollama model
+3. **Complete your AI Context Profile** (optional but recommended)
    - Navigate to Settings → AI Context
    - Fill in personal information, goals, preferences
    - This helps the AI provide personalized responses
-3. **Start chatting** with your AI assistant
+4. **Start chatting** with your AI assistant
 
 ### AI Conversations
-The AI assistant (Frankie) can help with:
+The AI assistant can help with:
 - **Emotional Support**: Discuss feelings, challenges, and concerns
 - **Goal Setting**: Define and track personal/professional goals
 - **Daily Planning**: Organize your day and priorities
+- **Task Management**: Create and manage todos during conversations
 - **Wellness Advice**: Get tips for mental health and wellbeing
 - **General Conversation**: Chat about interests, ideas, and more
+
+### Wellbeing Check-ins
+LifePal includes a structured wellbeing system with three types of check-ins:
+
+#### Morning Catch-Up (8:00 AM default)
+- How you're feeling physically and mentally
+- What's on your schedule today
+- Any concerns or upcoming challenges
+- LLM can create dynamic midday reminders for stressful events
+
+#### Midday Check-In (Dynamic)
+- Created by LLM during morning check-in if needed
+- Follow-up before stressful events
+- Quick emotional check-in
+- Offer support and preparation tips
+
+#### Evening Reflection (8:00 PM default)
+- Reflect on the day's events
+- Identify highlights and challenges
+- Assign emotions to the day
+- Plan for tomorrow
+- Generate daily summary
+
+**Check-in Features:**
+- Conversations are separate from general chat history
+- Each check-in includes context from previous check-ins
+- Your tasks for today/week are included in the context
+- LLM extracts structured insights for analytics
+- Actions taken (reminders, tasks) are tracked
 
 ### Example Interactions
 - "What do you know about me?"
 - "I'm feeling stressed about work, can you help?"
 - "What are some good coping mechanisms for anxiety?"
 - "Help me set some personal goals for this year"
+- "Add a task to prepare for tomorrow's meeting"
 - "Tell me about my support network"
 
 ### Personalization
@@ -210,6 +270,7 @@ The AI uses your context profile to:
 - Understand your communication style
 - Provide relevant, personalized advice
 - Respect topics you want to avoid
+- Include your tasks in check-in conversations
 
 ## 📱 User Interface
 
@@ -257,10 +318,11 @@ The AI uses your context profile to:
 backend/src/
 ├── core/              # Django settings and configuration
 ├── users/             # User management, profiles, authentication
-├── llm_chat/          # Chat functionality and conversation management
+├── llm_chat/          # Chat functionality, conversations, and intent detection
 ├── llm_service/       # Ollama integration and prompt management
-├── diary/             # Diary entries (future)
-└── todo/              # Todo list management (future)
+├── wellbeing/         # Check-ins, daily logs, emotions, and moments
+├── todo/              # Task management with priorities and categories
+└── notifications/     # Push notifications and reminders
 ```
 
 ### Frontend Structure
@@ -270,8 +332,9 @@ frontend/src/
 │   ├── chat/         # Chat interface
 │   ├── login/        # Authentication
 │   ├── profile/      # User profile
-│   ├── settings/     # App settings
-│   └── context/      # AI context profile
+│   ├── settings/     # App settings and notifications
+│   ├── context/      # AI context profile
+│   └── ai-identity/  # AI identity customization
 ├── components/        # Reusable React components
 ├── contexts/          # React Context providers (Auth, Theme)
 └── lib/              # Utilities and API client
@@ -283,9 +346,67 @@ frontend/src/
 - **User**: Django auth user model
 - **UserProfile**: Basic user information (preferred_name, bio)
 - **UserSettings**: App preferences (theme, timezone, notifications)
+- **AIIdentityProfile**: Customizable AI personality and model
 - **LLMContextProfile**: Detailed user context for AI (encrypted)
-- **Conversation**: Chat conversation metadata
-- **Message**: Individual chat messages
+- **Conversation**: Chat conversation metadata with type (general/checkin)
+- **Message**: Individual chat messages with role and content
+- **Intent**: Detected user intents with confidence and parameters
+- **Task**: Todo items with priorities, categories, and due dates
+- **DailyLog**: Daily wellbeing summaries with emotions and completion status
+- **CheckIn**: Scheduled/ad-hoc check-ins with status, insights, and actions
+- **Emotion**: Reference data for emotion tracking
+- **DailyLogEmotion**: Links emotions to daily logs with intensity
+- **Moment**: User journal entries (future)
+
+## 📡 API Documentation
+
+### Main API Endpoints
+
+#### Authentication
+- `POST /api/token/pair` - Get access and refresh tokens
+- `POST /api/token/refresh` - Refresh access token
+- `POST /api/token/verify` - Verify token validity
+
+#### Chat
+- `GET /api/chat/conversations` - List general conversations (excludes check-ins)
+- `GET /api/chat/conversations/{id}` - Get conversation with messages
+- `POST /api/chat/send` - Send message (non-streaming)
+- `POST /api/chat/send/stream` - Send message (streaming)
+- `DELETE /api/chat/conversations/{id}` - Delete conversation
+
+#### Wellbeing
+- `GET /api/wellbeing/checkins/today` - Get today's check-ins
+- `GET /api/wellbeing/checkins/{id}` - Get specific check-in
+- `POST /api/wellbeing/checkins/{id}/start` - Start check-in conversation
+- `POST /api/wellbeing/checkins/{id}/complete` - Complete check-in with insights
+- `POST /api/wellbeing/checkins/{id}/skip` - Skip check-in
+- `POST /api/wellbeing/checkins/adhoc` - Create ad-hoc check-in
+- `GET /api/wellbeing/daily-log/today` - Get today's daily log
+- `GET /api/wellbeing/daily-log/{date}` - Get daily log by date
+
+#### Tasks
+- `GET /api/todo/tasks` - List tasks
+- `POST /api/todo/tasks` - Create task
+- `PUT /api/todo/tasks/{id}` - Update task
+- `DELETE /api/todo/tasks/{id}` - Delete task
+
+#### Users
+- `POST /api/users/register` - Register new user
+- `GET /api/users/profile` - Get user profile
+- `PUT /api/users/profile` - Update profile
+- `GET /api/users/settings` - Get user settings
+- `PUT /api/users/settings` - Update settings
+- `GET /api/users/ai-identity` - Get AI identity profile
+- `PUT /api/users/ai-identity` - Update AI identity
+- `GET /api/users/context` - Get LLM context profile
+- `PUT /api/users/context` - Update context profile
+
+#### Notifications
+- `GET /api/notifications/` - List notifications
+- `POST /api/notifications/register-device` - Register push notification device
+- `POST /api/notifications/test` - Send test notification
+
+**Interactive API Docs**: Visit `http://localhost:8080/api/docs` for full Swagger documentation
 
 ## 🧪 Development
 
@@ -314,6 +435,7 @@ npm run lint
 ### Database Management
 ```bash
 # Create new migration
+cd backend/src
 python manage.py makemigrations
 
 # Apply migrations
@@ -321,6 +443,36 @@ python manage.py migrate
 
 # Access Django shell
 python manage.py shell
+```
+
+### Scheduling Check-ins
+```bash
+# Schedule check-ins for all users (run daily at midnight)
+python manage.py schedule_checkins
+
+# Or use the scheduler programmatically
+python manage.py shell
+>>> from wellbeing.scheduler import CheckInScheduler
+>>> from django.contrib.auth.models import User
+>>> user = User.objects.first()
+>>> CheckInScheduler.schedule_daily_checkins(user)
+```
+
+### Populate Initial Data
+```bash
+# Create emotion reference data
+python manage.py shell
+>>> from wellbeing.models import Emotion
+>>> emotions = [
+...     {'name': 'Happy', 'emoji': '😊'},
+...     {'name': 'Sad', 'emoji': '😢'},
+...     {'name': 'Anxious', 'emoji': '😰'},
+...     {'name': 'Calm', 'emoji': '😌'},
+...     {'name': 'Excited', 'emoji': '🤩'},
+...     {'name': 'Stressed', 'emoji': '😫'},
+... ]
+>>> for e in emotions:
+...     Emotion.objects.get_or_create(name=e['name'], defaults={'emoji': e['emoji']})
 ```
 
 ## 🚀 Deployment
@@ -336,6 +488,25 @@ python manage.py shell
 - [ ] Configure environment variables
 - [ ] Set up monitoring and logging
 - [ ] Enable database backups
+- [ ] Set up check-in scheduler (cron or Celery)
+- [ ] Configure push notifications for check-ins
+- [ ] Populate emotion reference data
+
+## 📚 Additional Documentation
+
+Detailed documentation is available in the `backend/docs/` directory:
+
+- **[Check-in Usage Guide](backend/docs/checkin_usage_guide.md)** - Comprehensive examples for implementing check-in flows
+- **[Check-in Migration Guide](backend/docs/checkin_migration_guide.md)** - Step-by-step setup and migration instructions
+- **[Check-in Quick Reference](backend/docs/checkin_quick_reference.md)** - Quick code snippets and API examples
+
+### Key Documentation Topics
+- How to schedule check-ins (morning, midday, evening)
+- Building context for check-in conversations
+- Extracting and storing insights
+- Implementing tool calling (create reminders, tasks, moments)
+- Setting up notification scheduling
+- Frontend integration examples
 
 ## 🤝 Contributing
 
@@ -352,5 +523,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 - Built with ❤️ and the power of open source
-- Inspired by the need for more intuitive productivity tools
-- Made possible by the Ollama and Django communities
+- Inspired by the need for personalized wellbeing tools
+- Powered by Ollama, Django, and Next.js communities

@@ -88,7 +88,6 @@ INSTALLED_APPS = [
     'ninja_extra',
     'ninja_jwt',
     'django_celery_beat',
-    'encrypted_model_fields',
 
     'llm_service',
     'llm_chat',
@@ -183,3 +182,11 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Celery Beat Schedule - Periodic tasks
+CELERY_BEAT_SCHEDULE = {
+    'process-scheduled-notifications': {
+        'task': 'notifications.tasks.process_scheduled_notifications',
+        'schedule': 60.0,  # Run every 60 seconds
+    },
+}

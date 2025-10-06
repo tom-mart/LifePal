@@ -2,14 +2,24 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 import uuid
-from encrypted_model_fields.fields import EncryptedTextField, EncryptedCharField
 
 
 class Conversation(models.Model):
-    """Model for storing chat conversations with encrypted title"""
+    """Model for storing chat conversations"""
+    CONVERSATION_TYPES = (
+        ('general', 'General Chat'),
+        ('checkin', 'Check-in'),
+    )
+    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='conversations')
-    title = EncryptedCharField(max_length=255, blank=True)  # Encrypt conversation titles
+    title = models.CharField(max_length=255, blank=True)
+    conversation_type = models.CharField(
+        max_length=20,
+        choices=CONVERSATION_TYPES,
+        default='general',
+        help_text="Type of conversation - check-ins are excluded from general chat history"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -18,16 +28,30 @@ class Conversation(models.Model):
         ordering = ['-updated_at']
         verbose_name = _('Conversation')
         verbose_name_plural = _('Conversations')
+        indexes = [
+            models.Index(fields=['user', 'conversation_type']),
+            models.Index(fields=['conversation_type', '-updated_at']),
+        ]
     
     def __str__(self):
         return f"{self.title or 'Untitled'} - {self.user.email}"
     
     def get_messages(self):
         return self.messages.all().order_by('created_at')
+    
+    @classmethod
+    def get_general_chats(cls, user):
+        """Get only general chat conversations, excluding check-ins."""
+        return cls.objects.filter(user=user, conversation_type='general', is_active=True)
+    
+    @classmethod
+    def get_checkin_conversations(cls, user):
+        """Get only check-in conversations."""
+        return cls.objects.filter(user=user, conversation_type='checkin', is_active=True)
 
 
 class Message(models.Model):
-    """Model for storing individual chat messages with encrypted content"""
+    """Model for storing individual chat messages"""
     ROLE_CHOICES = (
         ('user', 'User'),
         ('assistant', 'Assistant'),
@@ -37,7 +61,7 @@ class Message(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
-    content = EncryptedTextField()  # Encrypt message content
+    content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:

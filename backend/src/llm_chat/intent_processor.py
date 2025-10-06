@@ -49,6 +49,10 @@ class IntentProcessor:
         if not intent_result:
             return None
         
+        # Skip 'chat' intent - it's just a fallback for normal conversation
+        if intent_result.intent_type == 'chat':
+            return None
+        
         # Create Intent record
         intent = Intent.objects.create(
             message=message,

@@ -17,13 +17,14 @@ class TaskDetector(BaseDetector):
     
     DETECTOR_NAME = "task"
     
-    INTENT_PATTERNS = {
-        'task_create': r'(?i)(create|add|make|new).*?(task|todo|to-do|to do)',
-        'task_list': r'(?i)(show|list|display|view|what|get|see|check).*?(task|todo|to-do|to do|list)',
-        'task_complete': r'(?i)(complete|finish|done|mark.*done|mark.*complete).*?(task|todo)',
-        'task_update': r'(?i)(update|change|modify|edit).*?(task|todo)',
-        'task_delete': r'(?i)(delete|remove|cancel).*?(task|todo)',
-    }
+    # Use a list of tuples to enforce order. Most specific patterns first.
+    INTENT_PATTERNS = [
+        ('task_complete', r'(?i)(complete|finish|done|mark.*done|mark.*complete).*?(task|todo)'),
+        ('task_delete', r'(?i)(delete|remove|cancel).*?(task|todo)'),
+        ('task_update', r'(?i)(update|change|modify|edit).*?(task|todo)'),
+        ('task_list', r'(?i)(show|list|display|view|what|get|see|check).*?(task|todo|to-do|to do|list)'),
+        ('task_create', r'(?i)(create|add|make|new).*?(task|todo|to-do|to do)'),
+    ]
     
     def _extract_parameters(self, content: str, intent_type: str, matches: List) -> Dict[str, Any]:
         """Extract task-specific parameters"""

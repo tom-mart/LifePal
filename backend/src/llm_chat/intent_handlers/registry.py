@@ -82,8 +82,16 @@ class HandlerRegistry:
         This method imports all handler modules and registers them automatically.
         """
         try:
-            from .handlers import TaskHandler
-            self.register(TaskHandler())
+            from .handlers.task_handler import TaskHandler
+            from .handlers.reminder_handler import ReminderHandler
+
+            # List of all available intent handlers
+            HANDLERS = [
+                TaskHandler,
+                ReminderHandler,
+            ]
+            for handler_class in HANDLERS:
+                self.register(handler_class())
             logger.info("Handler auto-discovery complete")
         except ImportError as e:
             logger.warning(f"Could not import some handlers during auto-discovery: {e}")
