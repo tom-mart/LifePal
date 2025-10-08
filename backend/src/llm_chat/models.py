@@ -56,6 +56,7 @@ class Message(models.Model):
         ('user', 'User'),
         ('assistant', 'Assistant'),
         ('system', 'System'),
+        ('trigger', 'Trigger'),  # Hidden message that triggers conversation but not displayed
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

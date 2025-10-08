@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from celery.schedules import crontab
 
 # Only import settings_local in development (when DEBUG env var is not explicitly set to False)
 if os.environ.get('DEBUG', 'True') != 'False':
@@ -63,6 +64,14 @@ if 'OLLAMA_DEFAULT_MODEL' in os.environ:
 elif 'OLLAMA_DEFAULT_MODEL' not in globals():
     OLLAMA_DEFAULT_MODEL = 'llama2'
 
+# ChromaDB settings
+# Production (Docker): USE_DOCKER_CHROMADB=true, connects to chromadb:8000
+# Development (Local): USE_DOCKER_CHROMADB=false, uses local persistent storage
+USE_DOCKER_CHROMADB = os.environ.get('USE_DOCKER_CHROMADB', 'false')
+CHROMADB_HOST = os.environ.get('CHROMADB_HOST', 'chromadb')  # Docker service name
+CHROMADB_PORT = int(os.environ.get('CHROMADB_PORT', '8000'))
+CHROMADB_PATH = os.path.join(BASE_DIR, 'chromadb_data')  # Local dev storage
+
 # CORS settings from environment
 if 'CORS_ALLOWED_ORIGINS' in os.environ:
     CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS').split(',')
@@ -90,6 +99,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
 
     'llm_service',
+    'llm_tools',
     'llm_chat',
 
     'users',
@@ -188,5 +198,13 @@ CELERY_BEAT_SCHEDULE = {
     'process-scheduled-notifications': {
         'task': 'notifications.tasks.process_scheduled_notifications',
         'schedule': 60.0,  # Run every 60 seconds
+    },
+    'schedule-daily-checkins': {
+        'task': 'wellbeing.tasks.schedule_daily_checkins_for_all_users',
+        'schedule': crontab(hour=0, minute=0),  # Run daily at midnight
+    },
+    'send-pending-checkin-notifications': {
+        'task': 'wellbeing.tasks.send_pending_checkin_notifications',
+        'schedule': 60.0,  # Run every minute
     },
 }

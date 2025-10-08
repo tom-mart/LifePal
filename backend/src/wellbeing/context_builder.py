@@ -38,6 +38,12 @@ class CheckInContextBuilder:
         # Tool instructions
         tool_instructions = self._get_tool_instructions()
         
+        # Completion instructions
+        from .completion_detector import CheckInCompletionDetector
+        completion_instructions = CheckInCompletionDetector.build_completion_instruction(
+            self.checkin.check_in_type
+        )
+        
         prompt = f"""
 {identity}
 
@@ -49,12 +55,15 @@ class CheckInContextBuilder:
 
 {tool_instructions}
 
+{completion_instructions}
+
 Remember:
 - Be warm, empathetic, and supportive
 - Ask follow-up questions to understand deeply
 - Keep the conversation focused on the check-in purpose
 - Extract structured insights at the end
 - Suggest actions when appropriate (reminders, tasks, etc.)
+- When the conversation reaches a natural conclusion, use the completion marker and provide insights
 """
         
         return prompt.strip()

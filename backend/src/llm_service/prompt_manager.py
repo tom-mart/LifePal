@@ -50,12 +50,18 @@ Always respond with warmth and understanding. Use markdown formatting for better
             # Load or create AIIdentityProfile
             self.ai_identity = AIIdentityProfile.get_or_create_for_user(user)
     
-    def get_system_prompt(self, include_user_context: bool = True, include_dynamic_context: bool = True) -> str:
-        """Generate system prompt with optional user context.
+    def get_system_prompt(
+        self, 
+        include_user_context: bool = True, 
+        include_dynamic_context: bool = True,
+        include_tool_instructions: bool = True
+    ) -> str:
+        """Generate system prompt with optional user context and tool instructions.
         
         Args:
             include_user_context: Whether to include user profile information in the prompt.
             include_dynamic_context: Whether to include dynamic context (date, time, etc.)
+            include_tool_instructions: Whether to include Tool_Retriever instructions (ReAct pattern)
             
         Returns:
             Complete system prompt string.
@@ -65,6 +71,13 @@ Always respond with warmth and understanding. Use markdown formatting for better
             prompt = self.ai_identity.generate_system_prompt()
         else:
             prompt = self.DEFAULT_SYSTEM_PROMPT
+        
+        # Add Tool_Retriever instructions (ReAct pattern)
+        if include_tool_instructions:
+            tool_instructions = self._build_tool_instructions()
+            if tool_instructions:
+                prompt += "\n\n=== YOUR CAPABILITIES ===\n"
+                prompt += tool_instructions
         
         # Add dynamic context (date, time, etc.)
         if include_dynamic_context:
@@ -81,6 +94,90 @@ Always respond with warmth and understanding. Use markdown formatting for better
                 prompt += user_context
         
         return prompt
+    
+    def _build_tool_instructions(self) -> str:
+        """Build Tool_Retriever instructions (ReAct pattern).
+        
+        Returns:
+            Formatted tool instructions string.
+        """
+        instructions = """You have access to tools that allow you to perform actions and fetch data.
+
+## ⚠️ CRITICAL: Tool Accuracy Rule
+
+When listing or describing available tools, you MUST:
+- ONLY mention tools that were explicitly returned by the tool_retriever function
+- NEVER suggest, mention, or imply the existence of tools that were not in the tool_retriever response
+- If tool_retriever returns only 1 tool, mention only that 1 tool
+- If tool_retriever returns 0 tools, say "I currently don't have any tools available"
+- Do NOT hallucinate or assume tools exist based on categories or previous knowledge
+
+## Core Instructions
+
+You MUST call the **tool_retriever** function FIRST in these situations:
+
+1. **When asked about your capabilities or available tools**
+   - User asks: "What can you do?", "What tools do you have?", "What features are available?"
+   - Action: Call tool_retriever() to discover all available tools, then summarize them
+
+2. **When the user's request requires action or data:**
+   - Fetching live data (tasks, reminders, check-ins, wellbeing data, etc.)
+   - Performing an action (creating tasks, starting check-ins, saving moments, etc.)
+   - Interacting with external systems (scheduling, notifications, data storage)
+   - Action: Call tool_retriever with appropriate category or query
+
+3. **General conversation:**
+   - If the user asks a general knowledge question or wants to have a conversation
+   - You can answer directly without using tools
+
+## Tool Usage Pattern (ReAct - Reason + Act)
+
+1. **Reason**: Analyze the user's request and determine if it requires tool usage
+2. **Act**: If tools are needed, call tool_retriever to discover available tools
+3. **Execute**: Use the appropriate tools with extracted parameters
+4. **Respond**: Generate a natural response incorporating tool results
+
+## Tool Categories (for tool_retriever queries)
+
+These are categories you can use when calling tool_retriever, NOT actual tools:
+- **wellbeing**: For check-in and wellbeing tracking
+- **tasks**: For task management and organization
+- **reminders**: For reminder and notification features
+- **moments**: For moment capture and journaling
+- **context**: For context retrieval and history
+
+Note: The actual available tools are determined by calling tool_retriever().
+
+## Examples
+
+**Example 1: User Asks About Capabilities**
+User: "What tools do you have access to?"
+→ Reason: User wants to know available tools
+→ Act: Call tool_retriever() to get all tools
+→ Respond: List ONLY the tools returned by tool_retriever. Do NOT mention or suggest tools that were not in the response. If only one tool is available, only mention that one tool.
+
+**Example 2: Check-in Request**
+User: "I want to start my morning check-in"
+→ Reason: User wants to start a check-in (action needed)
+→ Act: Call tool_retriever(intent_category='wellbeing')
+→ Execute: Use start_checkin tool
+→ Respond: Greet user with personalized opening based on context
+
+**Example 3: Task Creation**
+User: "Remind me to call mom at 5pm"
+→ Reason: User wants to create a task (action needed)
+→ Act: Call tool_retriever(intent_category='tasks')
+→ Execute: Use create_task tool
+→ Respond: Confirm task creation
+
+**Example 4: General Conversation**
+User: "How are you today?"
+→ Reason: General conversation (no action needed)
+→ Respond: Answer directly without tools
+
+Remember: Always maintain your personality and communication style while using tools."""
+
+        return instructions
     
     def _build_dynamic_context(self) -> str:
         """Build dynamic context (date, time, location, etc.).

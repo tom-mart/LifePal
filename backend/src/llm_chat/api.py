@@ -20,19 +20,10 @@ from .schemas import (
 from llm_service.ollama_client import OllamaClient
 from llm_service.prompt_manager import PromptManager
 
-# Intent processing imports
-try:
-    from .intent_processor import IntentProcessor
-    INTENT_PROCESSING_ENABLED = True
-except ImportError:
-    INTENT_PROCESSING_ENABLED = False
-    IntentProcessor = None
-
 router = Router(tags=['Chat'], auth=JWTAuth())
 
 # Lazy initialization of services to avoid module-level initialization issues
 _ollama_client = None
-_intent_processor = None
 
 def get_ollama_client():
     """Lazy initialization of Ollama client"""
@@ -40,13 +31,6 @@ def get_ollama_client():
     if _ollama_client is None:
         _ollama_client = OllamaClient()
     return _ollama_client
-
-def get_intent_processor():
-    """Lazy initialization of intent processor"""
-    global _intent_processor
-    if _intent_processor is None and INTENT_PROCESSING_ENABLED:
-        _intent_processor = IntentProcessor()
-    return _intent_processor
 
 
 @router.post('/send', response=ChatResponseSchema)
@@ -138,28 +122,21 @@ def send_message(request, data: ChatRequestSchema = None, file: UploadedFile = N
         'content': user_message_obj.content
     })
     
-    # Process intent (detect and handle) if enabled
-    intent_data = None
-    processor = get_intent_processor()
-    if processor:
-        intent_data = processor.process_message(user_message_obj)
-        if intent_data:
-            pass  # Intent processed successfully
-    
-    # If we have a specific response from the intent handler, use that
-    if intent_data and 'message' in intent_data:
-        response_content = intent_data['message']
-    else:
-        # Otherwise get response from Ollama
-        try:
-            # Get user's preferred model from AI Identity Profile
-            model = None
-            if user and hasattr(user, 'ai_identity'):
-                model = user.ai_identity.preferred_model
-            
-            response_content = get_ollama_client().chat(messages, user=user, model=model)
-        except Exception as e:
-            response_content = f"I'm sorry, I'm having trouble connecting to my brain. Please try again later."
+    # Get response from Ollama with tool support
+    try:
+        # Get user's preferred model from AI Identity Profile
+        model = None
+        if user and hasattr(user, 'ai_identity'):
+            model = user.ai_identity.preferred_model
+        
+        response_content = get_ollama_client().chat(
+            messages, 
+            user=user, 
+            model=model,
+            use_tools=True  # Enable Tool_Retriever pattern
+        )
+    except Exception as e:
+        response_content = f"I'm sorry, I'm having trouble connecting to my brain. Please try again later."
     
     # Save assistant response
     assistant_message = Message.objects.create(
@@ -171,24 +148,14 @@ def send_message(request, data: ChatRequestSchema = None, file: UploadedFile = N
     # Update conversation timestamp
     conversation.save()
     
-    # Prepare intent response - match IntentSchema format
-    intent_response = None
-    if intent_data:
-        intent_response = {
-            'intent_type': intent_data.get('response_type', 'unknown'),
-            'confidence': 0.8,  # Default confidence
-            'parameters': intent_data
-        }
-    
     return {
         'message': {
-            'id': assistant_message.id,
+            'id': str(assistant_message.id),
             'role': assistant_message.role,
             'content': assistant_message.content,
             'created_at': assistant_message.created_at
         },
-        'conversation_id': conversation.id,
-        'intent': intent_response
+        'conversation_id': str(conversation.id)
     }
 
 
@@ -204,7 +171,7 @@ def list_conversations(request):
     return {
         'conversations': [
             {
-                'id': conv.id,
+                'id': str(conv.id),
                 'title': conv.title or 'Untitled',
                 'conversation_type': conv.conversation_type,
                 'created_at': conv.created_at,
@@ -219,29 +186,36 @@ def list_conversations(request):
 def get_conversation(request, conversation_id: str):
     """Get a specific conversation with all messages"""
     user = request.auth
-    conversation = get_object_or_404(
-        Conversation, 
-        id=conversation_id, 
-        user=user
-    )
-    
-    messages = conversation.get_messages()
-    
-    return {
-        'id': conversation.id,
-        'title': conversation.title or 'Untitled',
-        'created_at': conversation.created_at,
-        'updated_at': conversation.updated_at,
-        'messages': [
-            {
-                'id': msg.id,
-                'role': msg.role,
-                'content': msg.content,
-                'created_at': msg.created_at
-            }
-            for msg in messages
-        ]
-    }
+    try:
+        conversation = get_object_or_404(
+            Conversation, 
+            id=conversation_id, 
+            user=user
+        )
+        
+        messages = conversation.get_messages()
+        
+        return {
+            'id': str(conversation.id),
+            'title': conversation.title or 'Untitled',
+            'conversation_type': conversation.conversation_type,
+            'created_at': conversation.created_at,
+            'updated_at': conversation.updated_at,
+            'messages': [
+                {
+                    'id': str(msg.id),
+                    'role': msg.role,
+                    'content': msg.content,
+                    'created_at': msg.created_at
+                }
+                for msg in messages
+            ]
+        }
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error loading conversation {conversation_id}: {str(e)}", exc_info=True)
+        raise
 
 
 @router.delete('/conversations/{conversation_id}')
@@ -313,102 +287,112 @@ def send_message_stream(request, data: ChatRequestSchema):
         'content': user_message_obj.content
     })
     
-    # Process intent (detect and handle) if enabled
-    intent_data = None
-    processor = get_intent_processor()
-    if processor:
-        intent_data = processor.process_message(user_message_obj)
-        if intent_data:
-            pass  # Intent processed successfully
-    
-    # If an intent was handled, stream the response back
-    if intent_data and 'message' in intent_data:
-        # Create the assistant message BEFORE the generator to avoid DB issues
+    # Get streaming response from Ollama with tool support
+    def stream_response():
+        # Send initial message with conversation ID
+        yield json.dumps({'type': 'start', 'conversation_id': str(conversation.id)}) + '\n'
+        
+        full_content = ""
+        try:
+            # Get user's preferred model from AI Identity Profile
+            model = None
+            if user and hasattr(user, 'ai_identity'):
+                model = user.ai_identity.preferred_model
+            
+            # Stream the response from Ollama with Tool_Retriever support
+            for event in get_ollama_client().chat_stream(
+                messages, 
+                user=user, 
+                model=model,
+                use_tools=True  # Enable Tool_Retriever pattern
+            ):
+                # Handle different event types
+                if isinstance(event, str):
+                    # Content chunk
+                    full_content += event
+                    yield json.dumps({'type': 'content', 'content': event}) + '\n'
+                elif isinstance(event, dict):
+                    # Tool event (tool_call, tool_result, tools_discovered)
+                    yield json.dumps(event) + '\n'
+        except Exception as e:
+            error_msg = f"I'm sorry, I'm having trouble connecting to my brain. Please try again later. Error: {str(e)}"
+            yield json.dumps({'type': 'content', 'content': error_msg}) + '\n'
+            full_content = error_msg
+        
+        # Check for check-in completion if this is a check-in conversation
+        checkin_complete = False
+        checkin_insights = None
+        cleaned_content = full_content
+        
+        if conversation.conversation_type == 'checkin':
+            from wellbeing.completion_detector import CheckInCompletionDetector
+            from wellbeing.models import CheckIn
+            
+            # Detect completion
+            is_complete, cleaned_msg = CheckInCompletionDetector.detect_completion(full_content)
+            cleaned_content = cleaned_msg
+            
+            if is_complete:
+                checkin_complete = True
+                
+                # Try to get the check-in
+                try:
+                    checkin = CheckIn.objects.get(conversation=conversation, status='in_progress')
+                    
+                    # Extract insights
+                    insights = CheckInCompletionDetector.extract_insights(
+                        full_content,
+                        checkin.check_in_type
+                    )
+                    
+                    # Generate summary
+                    conv_messages = [
+                        {'role': msg.role, 'content': msg.content}
+                        for msg in conversation.get_messages()
+                    ]
+                    summary = CheckInCompletionDetector.generate_summary(
+                        conv_messages,
+                        checkin.check_in_type
+                    )
+                    
+                    # Complete the check-in
+                    checkin.complete(
+                        insights=insights or {},
+                        summary=summary,
+                        actions_taken=checkin.actions_taken  # Keep existing actions
+                    )
+                    
+                    checkin_insights = insights
+                    
+                except CheckIn.DoesNotExist:
+                    pass  # No check-in found, just continue
+        
+        # Save the complete message to the database (with cleaned content)
         assistant_message = Message.objects.create(
             conversation=conversation,
             role='assistant',
-            content=intent_data['message']
+            content=cleaned_content
         )
+        
+        # Send the final message with metadata
+        end_data = {
+            'type': 'end',
+            'message': {
+                'id': str(assistant_message.id),
+                'role': assistant_message.role,
+                'content': cleaned_content,
+                'created_at': assistant_message.created_at.isoformat()
+            }
+        }
+        
+        # Add check-in completion info if applicable
+        if checkin_complete:
+            end_data['checkin_complete'] = True
+            end_data['checkin_insights'] = checkin_insights
+        
+        yield json.dumps(end_data) + '\n'
         
         # Update conversation timestamp
         conversation.save()
-        
-        # Prepare intent response for the 'end' event
-        intent_response = {
-            'response_type': intent_data.get('response_type'),
-            'data': intent_data
-        }
-        
-        def intent_stream_response():
-            # 1. Send start event
-            yield json.dumps({'type': 'start', 'conversation_id': str(conversation.id)}) + '\n'
-
-            # 2. Send content
-            yield json.dumps({'type': 'content', 'content': assistant_message.content}) + '\n'
-
-            # 3. Send end event with final message data
-            yield json.dumps({
-                'type': 'end',
-                'message': {
-                    'id': str(assistant_message.id),
-                    'role': assistant_message.role,
-                    'content': assistant_message.content,
-                    'created_at': assistant_message.created_at.isoformat(),
-                },
-                'intent': intent_response
-            }) + '\n'
-
-        return StreamingHttpResponse(intent_stream_response(), content_type='application/x-ndjson')
-    else:
-        # Otherwise get streaming response from Ollama
-        def stream_response():
-            # Send initial message with conversation ID
-            yield json.dumps({'type': 'start', 'conversation_id': str(conversation.id)}) + '\n'
-            
-            full_content = ""
-            try:
-                # Get user's preferred model from AI Identity Profile
-                model = None
-                if user and hasattr(user, 'ai_identity'):
-                    model = user.ai_identity.preferred_model
-                
-                # Stream the response from Ollama
-                for content_chunk in get_ollama_client().chat_stream(messages, user=user, model=model):
-                    full_content += content_chunk
-                    yield json.dumps({'type': 'content', 'content': content_chunk}) + '\n'
-            except Exception as e:
-                error_msg = f"I'm sorry, I'm having trouble connecting to my brain. Please try again later. Error: {str(e)}"
-                yield json.dumps({'type': 'content', 'content': error_msg}) + '\n'
-                full_content = error_msg
-            
-            # Save the complete message to the database
-            assistant_message = Message.objects.create(
-                conversation=conversation,
-                role='assistant',
-                content=full_content
-            )
-            
-            # Prepare intent response
-            intent_response = None
-            if intent_data:
-                intent_response = {
-                    'response_type': intent_data.get('response_type'),
-                    'data': intent_data
-                }
-            
-            # Send the final message with metadata
-            yield json.dumps({
-                'type': 'end',
-                'message': {
-                    'id': str(assistant_message.id),
-                    'role': assistant_message.role,
-                    'content': full_content,
-                    'created_at': assistant_message.created_at.isoformat()
-                },
-                'intent': intent_response
-            }) + '\n'
-            
-            # Update conversation timestamp
-            conversation.save()
-        
-        return StreamingHttpResponse(stream_response(), content_type='application/x-ndjson')
+    
+    return StreamingHttpResponse(stream_response(), content_type='application/x-ndjson')

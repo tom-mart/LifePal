@@ -13,12 +13,12 @@ class MessageSchema(Schema):
 class ChatRequestSchema(Schema):
     #Schema for chat request
     message: str
-    conversation_id: Optional[UUID] = None
+    conversation_id: Optional[str] = None
 
 
 class MessageResponseSchema(Schema):
     #Schema for individual message response
-    id: UUID
+    id: str
     role: str
     content: str
     created_at: datetime
@@ -34,13 +34,13 @@ class IntentSchema(Schema):
 class ChatResponseSchema(Schema):
     #Schema for chat response
     message: MessageResponseSchema
-    conversation_id: UUID
+    conversation_id: str
     intent: Optional[IntentSchema] = None
 
 
 class ConversationSchema(Schema):
     #Schema for conversation
-    id: UUID
+    id: str
     title: str
     conversation_type: str
     created_at: datetime

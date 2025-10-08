@@ -45,6 +45,13 @@ class UserSettings(models.Model):
     allow_relationship_requests = models.BooleanField(default=True)
     data_sharing_consent = models.BooleanField(default=False)
     
+    # Check-in schedule settings
+    checkin_schedule = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Check-in schedule configuration with weekday/weekend times"
+    )
+    
     # Usage statistics
     last_active = models.DateTimeField(null=True, blank=True)
     login_count = models.PositiveIntegerField(default=0)
@@ -64,6 +71,44 @@ class UserSettings(models.Model):
             return f"Settings for {self.user.email or 'Unknown User'}"
         except Exception:
             return f"Settings for {getattr(self.user, 'email', 'Unknown User')}"
+    
+    def get_checkin_schedule(self):
+        """Get check-in schedule with defaults if not set."""
+        default_schedule = {
+            "morning": {
+                "weekday": {
+                    "time": "06:00",
+                    "enabled": True
+                },
+                "weekend": {
+                    "time": "09:00",
+                    "enabled": True
+                }
+            },
+            "evening": {
+                "weekday": {
+                    "time": "21:00",
+                    "enabled": True
+                },
+                "weekend": {
+                    "time": "21:00",
+                    "enabled": True
+                }
+            }
+        }
+        
+        if not self.checkin_schedule:
+            return default_schedule
+        
+        # Merge with defaults to ensure all keys exist
+        schedule = default_schedule.copy()
+        schedule.update(self.checkin_schedule)
+        return schedule
+    
+    def set_checkin_schedule(self, schedule):
+        """Set check-in schedule."""
+        self.checkin_schedule = schedule
+        self.save(update_fields=['checkin_schedule', 'updated_at'])
 
 class LLMContextProfile(models.Model):
     """User context information for LLM personalization.

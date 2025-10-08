@@ -11,7 +11,7 @@ import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'trigger';
   content: string;
   created_at: string;
 }
@@ -36,6 +36,11 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamingMessageRef = useRef<string>('');
+  const lastActivityRef = useRef<number>(Date.now());
+  const inactivityCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [checkinId, setCheckinId] = useState<string | null>(null);
+  const [isCheckinMode, setIsCheckinMode] = useState(false);
+  const [checkinComplete, setCheckinComplete] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -46,12 +51,62 @@ export default function ChatPage() {
   useEffect(() => {
     if (user) {
       loadConversations();
+      
+      // Check for check-in parameter in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const checkinIdParam = urlParams.get('checkin_id');
+      
+      if (checkinIdParam) {
+        setCheckinId(checkinIdParam);
+        setIsCheckinMode(true);
+        startCheckin(checkinIdParam);
+      }
     }
   }, [user]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Inactivity check - start new chat after 15 minutes of inactivity
+  useEffect(() => {
+    const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes in milliseconds
+
+    const checkInactivity = () => {
+      const now = Date.now();
+      const timeSinceLastActivity = now - lastActivityRef.current;
+      
+      if (timeSinceLastActivity >= INACTIVITY_TIMEOUT && currentConversationId) {
+        console.log('Starting new chat due to inactivity');
+        startNewConversation();
+      }
+    };
+
+    // Update last activity on user interactions
+    const updateActivity = () => {
+      lastActivityRef.current = Date.now();
+    };
+
+    // Track various user activities
+    window.addEventListener('mousedown', updateActivity);
+    window.addEventListener('keydown', updateActivity);
+    window.addEventListener('touchstart', updateActivity);
+    window.addEventListener('scroll', updateActivity);
+
+    // Check for inactivity every minute
+    inactivityCheckIntervalRef.current = setInterval(checkInactivity, 60 * 1000);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('mousedown', updateActivity);
+      window.removeEventListener('keydown', updateActivity);
+      window.removeEventListener('touchstart', updateActivity);
+      window.removeEventListener('scroll', updateActivity);
+      if (inactivityCheckIntervalRef.current) {
+        clearInterval(inactivityCheckIntervalRef.current);
+      }
+    };
+  }, [currentConversationId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -66,6 +121,52 @@ export default function ChatPage() {
     }
   };
 
+  const startCheckin = async (checkinIdParam: string) => {
+    try {
+      const response = await apiClient.post<{
+        success: boolean;
+        conversation_id: string;
+        checkin_id: string;
+        checkin_type: string;
+        already_started?: boolean;
+      }>(`/api/wellbeing/checkins/${checkinIdParam}/start`, {});
+      
+      if (response.success) {
+        setCurrentConversationId(response.conversation_id);
+        
+        if (response.already_started) {
+          // Load existing conversation
+          loadConversation(response.conversation_id);
+        } else {
+          // New check-in: Auto-send trigger message to initiate LLM interaction
+          // The LLM will use Tool_Retriever to discover and call start_checkin tool
+          const triggerMessages: Record<string, string> = {
+            'morning': 'I want to start my morning check-in',
+            'midday': 'I want to do a midday check-in',
+            'evening': 'I want to start my evening reflection',
+            'adhoc': 'I want to do a check-in'
+          };
+          
+          const triggerMessage = triggerMessages[response.checkin_type] || 'I want to start my check-in';
+          
+          // Auto-send the trigger message
+          // This will cause the LLM to call Tool_Retriever → start_checkin → generate opening
+          setInput(triggerMessage);
+          
+          // Trigger the send immediately
+          setTimeout(() => {
+            const form = document.querySelector('form');
+            if (form) {
+              form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
+          }, 100);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to start check-in:', error);
+    }
+  };
+
   const loadConversation = async (conversationId: string) => {
     try {
       const data = await apiClient.get<{
@@ -73,11 +174,21 @@ export default function ChatPage() {
         title: string;
         messages: Message[];
       }>(`/api/chat/conversations/${conversationId}`);
-      setMessages(data.messages);
+      
+      // Filter out system and trigger messages from display
+      const displayMessages = (data.messages || []).filter(
+        msg => msg.role !== 'system' && msg.role !== 'trigger'
+      );
+      setMessages(displayMessages);
       setCurrentConversationId(conversationId);
       setSidebarOpen(false);
-    } catch (error) {
-      console.error('Failed to load conversation:', error);
+      lastActivityRef.current = Date.now();
+    } catch (error: any) {
+      console.error('Failed to load conversation:', conversationId, error);
+      // Still set the conversation as active even if loading fails
+      setMessages([]);
+      setCurrentConversationId(conversationId);
+      setSidebarOpen(false);
     }
   };
 
@@ -98,6 +209,22 @@ export default function ChatPage() {
     setMessages([]);
     setCurrentConversationId(null);
     setSidebarOpen(false);
+    lastActivityRef.current = Date.now(); // Update activity timestamp
+    // Clear check-in mode if active
+    setIsCheckinMode(false);
+    setCheckinId(null);
+    setCheckinComplete(false);
+  };
+
+  const exitCheckinMode = () => {
+    // Clear check-in state and start fresh conversation
+    setIsCheckinMode(false);
+    setCheckinId(null);
+    setCheckinComplete(false);
+    setMessages([]);
+    setCurrentConversationId(null);
+    // Remove checkin_id from URL
+    window.history.replaceState({}, '', '/chat');
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -118,6 +245,7 @@ export default function ChatPage() {
 
     setIsStreaming(true);
     streamingMessageRef.current = '';
+    lastActivityRef.current = Date.now(); // Update activity timestamp
 
     try {
       const stream = await apiClient.streamPost('/api/chat/send/stream', {
@@ -143,6 +271,16 @@ export default function ChatPage() {
               if (!currentConversationId) {
                 setCurrentConversationId(data.conversation_id);
               }
+            } else if (data.type === 'tool_call') {
+              // Tool is being called (optional: show status to user)
+              console.log('Tool called:', data.name, data.parameters);
+              // Could show a loading indicator here: "Fetching your tasks..."
+            } else if (data.type === 'tool_result') {
+              // Tool execution completed (optional: log result)
+              console.log('Tool result:', data.name, data.result);
+            } else if (data.type === 'tools_discovered') {
+              // Tool_Retriever returned new tools (optional: log)
+              console.log('Tools discovered:', data.count, data.tools);
             } else if (data.type === 'content') {
               streamingMessageRef.current += data.content;
               setMessages((prev) => {
@@ -173,6 +311,17 @@ export default function ChatPage() {
                 }
                 return newMessages;
               });
+              
+              // Check if check-in was completed
+              if (data.checkin_complete) {
+                setCheckinComplete(true);
+                console.log('Check-in completed with insights:', data.checkin_insights);
+                // Auto-exit check-in mode after a delay
+                setTimeout(() => {
+                  exitCheckinMode();
+                }, 3000); // 3 seconds to see the success message
+              }
+              
               loadConversations();
             }
           } catch (error) {
@@ -330,7 +479,19 @@ export default function ChatPage() {
             <LifePalLogo size="sm" variant="simple" />
             <span className="font-semibold text-base">LifePal</span>
           </div>
-          <div className="dropdown dropdown-end">
+          <div className="flex items-center space-x-1">
+            {currentConversationId && (
+              <button 
+                onClick={startNewConversation}
+                className="btn btn-ghost btn-sm btn-circle"
+                title="Close conversation"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+            <div className="dropdown dropdown-end">
             <label tabIndex={0} className="btn btn-ghost btn-sm btn-circle">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
@@ -360,6 +521,7 @@ export default function ChatPage() {
                 </li>
               ))}
             </ul>
+            </div>
           </div>
         </div>
 
@@ -374,6 +536,18 @@ export default function ChatPage() {
             )}
           </div>
           <div className="flex items-center space-x-2">
+            {currentConversationId && (
+              <button 
+                onClick={startNewConversation}
+                className="btn btn-ghost btn-sm gap-2"
+                title="Close conversation"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Close
+              </button>
+            )}
             <div className="dropdown dropdown-end">
               <label tabIndex={0} className="btn btn-ghost btn-sm gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -420,6 +594,38 @@ export default function ChatPage() {
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 pb-0">
+          {/* Check-in Mode Indicator */}
+          {isCheckinMode && !checkinComplete && (
+            <div className="max-w-4xl mx-auto mb-4">
+              <div className="alert alert-info">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>You're in a check-in session. The conversation will be saved to your daily log.</span>
+              </div>
+            </div>
+          )}
+          
+          {/* Check-in Complete Indicator */}
+          {checkinComplete && (
+            <div className="max-w-4xl mx-auto mb-4">
+              <div className="alert alert-success">
+                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="flex-1">
+                  <span>Check-in complete! Your insights have been saved.</span>
+                </div>
+                <button 
+                  onClick={exitCheckinMode}
+                  className="btn btn-sm btn-ghost"
+                >
+                  Start New Chat
+                </button>
+              </div>
+            </div>
+          )}
+          
           {messages.length === 0 && !isStreaming ? (
             <div className="flex flex-col items-center justify-center h-full text-center max-w-2xl mx-auto px-4 pt-8">
               <div className="mb-8 mt-4">
@@ -449,7 +655,7 @@ export default function ChatPage() {
             </div>
           ) : (
             <div className="max-w-4xl mx-auto space-y-6">
-              {messages.filter(msg => msg.role !== 'system').map((message, index) => (
+              {messages.filter(msg => msg.role !== 'system' && msg.role !== 'trigger').map((message, index) => (
                 <div
                   key={message.id || index}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}

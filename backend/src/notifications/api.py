@@ -58,6 +58,17 @@ def subscribe_to_push(request, payload: PushSubscriptionSchema):
             logger.error("Missing required keys")
             return 400, {"error": "Missing required keys (p256dh, auth)"}
         
+        # Deactivate all existing subscriptions for this user
+        # This handles the case where PWA cache is cleared and a new subscription is created
+        old_subscriptions = PushSubscription.objects.filter(
+            user=request.user,
+            is_active=True
+        ).exclude(endpoint=payload.endpoint)
+        
+        deactivated_count = old_subscriptions.update(is_active=False)
+        if deactivated_count > 0:
+            logger.info(f"Deactivated {deactivated_count} old subscription(s) for user {request.user.username}")
+        
         # Create or update subscription
         subscription, created = PushSubscription.objects.update_or_create(
             endpoint=payload.endpoint,

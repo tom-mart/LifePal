@@ -92,3 +92,7 @@ docker-compose.override.yml
 !Dockerfile
 !Dockerfile.prod
 !.dockerignore
+
+# ChromaDB local storage (development only)
+chromadb_data/
+backend/src/chromadb_data/

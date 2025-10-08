@@ -33,6 +33,7 @@ class UserSettingsSchema(Schema):
     push_notifications: bool
     allow_relationship_requests: bool
     data_sharing_consent: bool
+    checkin_schedule: Optional[dict] = None
     last_active: Optional[datetime] = None
     login_count: int
 
@@ -43,6 +44,7 @@ class UserSettingsUpdateSchema(Schema):
     push_notifications: Optional[bool] = None
     allow_relationship_requests: Optional[bool] = None
     data_sharing_consent: Optional[bool] = None
+    checkin_schedule: Optional[dict] = None
 
 # Personal Information
 class PersonalInfoSchema(Schema):

@@ -17,7 +17,7 @@
 /.next/
 /out/
 
-# production
+# productionsudo docker system prune --volumes
 /build
 
 # misc

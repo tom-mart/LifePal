@@ -70,29 +70,52 @@ def get_checkin(request, checkin_id: str):
 
 @router.post('/checkins/{checkin_id}/start')
 def start_checkin(request, checkin_id: str):
-    """Start a check-in conversation"""
+    """
+    Start a check-in conversation using Tool_Retriever pattern.
+    
+    This endpoint creates a conversation and returns the conversation_id.
+    The frontend will then send an auto-trigger message, and the LLM will:
+    1. Call Tool_Retriever to discover check-in tools
+    2. Call start_checkin tool to get context
+    3. Generate a personalized opening message
+    
+    This fixes the bug where users saw an empty chat instead of LLM's opening.
+    """
     user = request.auth
     checkin = get_object_or_404(
         CheckIn,
         id=checkin_id,
-        daily_log__user=user,
-        status='scheduled'
+        daily_log__user=user
     )
     
-    # Create conversation
+    # If already started, return existing conversation
+    if checkin.status == 'in_progress' and checkin.conversation:
+        return {
+            'success': True,
+            'conversation_id': str(checkin.conversation.id),
+            'checkin_id': str(checkin.id),
+            'already_started': True
+        }
+    
+    # Create conversation with ReAct system prompt
     conversation = Conversation.objects.create(
         user=user,
         title=f"{checkin.get_check_in_type_display()} - {checkin.daily_log.date}",
         conversation_type='checkin'
     )
     
-    # Start the check-in
+    # Start the check-in (marks as in_progress)
     checkin.start_conversation(conversation)
     
-    # Build context and add system message
-    from .context_builder import CheckInContextBuilder
-    context_builder = CheckInContextBuilder(user, checkin)
-    system_prompt = context_builder.build_system_prompt()
+    # Add system message with Tool_Retriever instructions
+    # PromptManager will automatically include tool instructions
+    from llm_service.prompt_manager import PromptManager
+    prompt_manager = PromptManager(user=user)
+    system_prompt = prompt_manager.get_system_prompt(
+        include_user_context=True,
+        include_dynamic_context=True,
+        include_tool_instructions=True  # ReAct pattern with Tool_Retriever
+    )
     
     Message.objects.create(
         conversation=conversation,
@@ -100,23 +123,13 @@ def start_checkin(request, checkin_id: str):
         content=system_prompt
     )
     
-    # Add initial LLM message
-    initial_message = context_builder.get_initial_message()
-    assistant_message = Message.objects.create(
-        conversation=conversation,
-        role='assistant',
-        content=initial_message
-    )
-    
+    # Return conversation details
+    # Frontend will auto-send trigger message to initiate the check-in
     return {
         'success': True,
         'conversation_id': str(conversation.id),
         'checkin_id': str(checkin.id),
-        'initial_message': {
-            'id': str(assistant_message.id),
-            'content': assistant_message.content,
-            'created_at': assistant_message.created_at
-        }
+        'checkin_type': checkin.check_in_type
     }
 
 
