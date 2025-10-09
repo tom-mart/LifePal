@@ -96,3 +96,6 @@ docker-compose.override.yml
 # ChromaDB local storage (development only)
 chromadb_data/
 backend/src/chromadb_data/
+
+/media
+/docs

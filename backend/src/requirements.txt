@@ -20,3 +20,8 @@ pydantic[email]
 dj-database-url
 pywebpush
 pytz
+
+# File processing (optional - install as needed for specific tools)
+# pytesseract  # OCR for receipt scanning
+# yt-dlp       # YouTube/audio downloading
+# reportlab    # PDF generation

@@ -117,10 +117,41 @@ def start_checkin(request, checkin_id: str):
         include_tool_instructions=True  # ReAct pattern with Tool_Retriever
     )
     
+    # Add check-in specific instructions
+    checkin_instructions = f"""
+
+## CHECK-IN SPECIFIC INSTRUCTIONS
+
+This is a {checkin.get_check_in_type_display()} check-in conversation.
+
+**IMPORTANT TOOL USAGE:**
+- The user's first message will trigger you to call tool_retriever and start_checkin
+- Call start_checkin ONLY ONCE at the beginning to get context
+- DO NOT call start_checkin again during the conversation
+- After getting the context, engage naturally with the user about their day
+
+**CHECK-IN COMPLETION:**
+
+Signs that the check-in is complete:
+- User says they're done, finished, or ready to end
+- User says goodbye, bye, see you later, etc.
+- User indicates they have nothing more to share
+- User says "that's it for today/now/this morning"
+- Natural conversation ending after covering the check-in topics
+
+When you detect completion:
+1. Provide a warm closing message
+2. Include [CHECKIN_COMPLETE] at the end of your message
+3. The system will automatically save insights
+
+Example:
+"Thank you for sharing with me today, Tom. I hope you have a restful evening. Take care! [CHECKIN_COMPLETE]"
+"""
+    
     Message.objects.create(
         conversation=conversation,
         role='system',
-        content=system_prompt
+        content=system_prompt + checkin_instructions
     )
     
     # Return conversation details

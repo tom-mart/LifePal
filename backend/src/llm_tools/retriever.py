@@ -100,46 +100,62 @@ def tool_retriever(
         }
 
 
-# Tool metadata for Tool_Retriever itself
-TOOL_RETRIEVER_METADATA = {
-    'name': 'tool_retriever',
-    'description': (
-        'Retrieve available tools for performing actions or fetching data. '
-        'Call this FIRST when you need to interact with external systems, '
-        'create/modify data, or fetch information. '
-        'Returns tool definitions you can then use.'
-    ),
-    'category': 'meta',
-    'parameters': {
-        'type': 'object',
-        'properties': {
-            'intent_category': {
-                'type': 'string',
-                'enum': ['wellbeing', 'tasks', 'reminders', 'moments', 'context'],
-                'description': 'Category of tools needed (optional but recommended for efficiency)'
+def get_tool_retriever_metadata():
+    """
+    Generate Tool_Retriever metadata dynamically with current categories.
+    This is called at runtime, not at module load time.
+    """
+    try:
+        from .models import ToolCategory
+        
+        # Get active categories from database
+        categories = list(ToolCategory.objects.filter(is_active=True).values_list('name', flat=True))
+    except Exception:
+        # Fallback if database not ready or no categories
+        categories = ['general']
+    
+    return {
+        'name': 'tool_retriever',
+        'description': (
+            'Retrieve available tools for performing actions or fetching data. '
+            'Call this FIRST when you need to interact with external systems, '
+            'create/modify data, or fetch information. '
+            'Returns tool definitions you can then use.'
+        ),
+        'category': 'meta',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'intent_category': {
+                    'type': 'string',
+                    'enum': categories if categories else ['general'],
+                    'description': (
+                        'Category of tools needed (optional but recommended for efficiency). '
+                        f'Available categories: {", ".join(categories) if categories else "none"}'
+                    )
+                },
+                'query': {
+                    'type': 'string',
+                    'description': 'Natural language description of what you need to do (optional)'
+                }
             },
-            'query': {
-                'type': 'string',
-                'description': 'Natural language description of what you need to do (optional)'
+            'required': []
+        },
+        'examples': [
+            {
+                'scenario': 'User wants to perform an action',
+                'call': f"tool_retriever(intent_category='{categories[0] if categories else 'general'}')",
+                'result': 'Returns tools in that category'
+            },
+            {
+                'scenario': 'Not sure which category',
+                'call': "tool_retriever(query='help user with their goal')",
+                'result': 'Returns relevant tools based on search'
+            },
+            {
+                'scenario': 'See all available tools',
+                'call': "tool_retriever()",
+                'result': 'Returns all active tools'
             }
-        },
-        'required': []
-    },
-    'examples': [
-        {
-            'scenario': 'User wants to start a check-in',
-            'call': "tool_retriever(intent_category='wellbeing')",
-            'result': 'Returns check-in related tools'
-        },
-        {
-            'scenario': 'User wants to create a task',
-            'call': "tool_retriever(intent_category='tasks')",
-            'result': 'Returns task management tools'
-        },
-        {
-            'scenario': 'Not sure which tools are needed',
-            'call': "tool_retriever(query='help user track their mood')",
-            'result': 'Returns relevant tools based on semantic search'
-        }
-    ]
-}
+        ]
+    }

@@ -95,17 +95,50 @@ Always respond with warmth and understanding. Use markdown formatting for better
         
         return prompt
     
+    def _get_category_list(self) -> str:
+        """Get formatted list of tool categories from database."""
+        try:
+            from llm_tools.models import ToolCategory
+            categories = ToolCategory.objects.filter(is_active=True).order_by('name')
+            
+            if not categories.exists():
+                return "No categories available yet."
+            
+            category_lines = []
+            for cat in categories:
+                category_lines.append(f"- **{cat.name}**: {cat.description}")
+            
+            return "\n".join(category_lines)
+        except Exception as e:
+            logger.error(f"Error loading categories: {e}")
+            return "- **general**: General purpose tools"
+    
     def _build_tool_instructions(self) -> str:
         """Build Tool_Retriever instructions (ReAct pattern).
         
         Returns:
             Formatted tool instructions string.
         """
-        instructions = """You have access to tools that allow you to perform actions and fetch data.
+        instructions = f"""You have access to tools that allow you to perform actions and fetch data.
 
-## ⚠️ CRITICAL: Tool Accuracy Rule
+## ⚠️ CRITICAL: Silent Tool Usage
 
-When listing or describing available tools, you MUST:
+**DO NOT announce or mention that you are calling tools, retrieving tools, or using functions.**
+
+Tool calls happen in the background. The user should NOT see:
+- ❌ "I've retrieved the tool..."
+- ❌ "I'm calling the start_checkin function..."
+- ❌ "Let me use the tool_retriever..."
+- ❌ "I'll now use this tool to..."
+
+Instead, use tools silently and respond naturally:
+- ✅ "Good morning! How are you feeling today?"
+- ✅ "I see you have 3 tasks scheduled. Let's talk about your day."
+- ✅ "Let's start your evening reflection."
+
+## Tool Accuracy Rule
+
+When listing or describing available tools (only when explicitly asked):
 - ONLY mention tools that were explicitly returned by the tool_retriever function
 - NEVER suggest, mention, or imply the existence of tools that were not in the tool_retriever response
 - If tool_retriever returns only 1 tool, mention only that 1 tool
@@ -140,11 +173,7 @@ You MUST call the **tool_retriever** function FIRST in these situations:
 ## Tool Categories (for tool_retriever queries)
 
 These are categories you can use when calling tool_retriever, NOT actual tools:
-- **wellbeing**: For check-in and wellbeing tracking
-- **tasks**: For task management and organization
-- **reminders**: For reminder and notification features
-- **moments**: For moment capture and journaling
-- **context**: For context retrieval and history
+{self._get_category_list()}
 
 Note: The actual available tools are determined by calling tool_retriever().
 

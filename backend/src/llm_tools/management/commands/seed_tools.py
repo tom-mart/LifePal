@@ -31,44 +31,32 @@ class Command(BaseCommand):
             {
                 'name': 'wellbeing',
                 'display_name': 'Wellbeing & Check-ins',
-                'description': 'Tools for wellbeing tracking and check-ins',
-                'icon': '🧘',
-                'order': 1
+                'description': 'Tools for wellbeing tracking, check-ins, and mental health support'
             },
             {
                 'name': 'tasks',
                 'display_name': 'Task Management',
-                'description': 'Tools for managing tasks and todos',
-                'icon': '✅',
-                'order': 2
+                'description': 'Tools for managing tasks, todos, and productivity'
             },
             {
                 'name': 'reminders',
                 'display_name': 'Reminders',
-                'description': 'Tools for creating and managing reminders',
-                'icon': '🔔',
-                'order': 3
+                'description': 'Tools for creating and managing reminders and notifications'
             },
             {
                 'name': 'moments',
                 'display_name': 'Moments & Journaling',
-                'description': 'Tools for capturing moments and journaling',
-                'icon': '📝',
-                'order': 4
+                'description': 'Tools for capturing moments, journaling, and reflection'
             },
             {
                 'name': 'communication',
                 'display_name': 'Communication',
-                'description': 'Tools for communication and messaging',
-                'icon': '💬',
-                'order': 5
+                'description': 'Tools for communication, messaging, and social interactions'
             },
             {
                 'name': 'information',
                 'display_name': 'Information Retrieval',
-                'description': 'Tools for retrieving information',
-                'icon': '🔍',
-                'order': 6
+                'description': 'Tools for retrieving, searching, and processing information'
             },
         ]
         

@@ -3,6 +3,37 @@ from django.contrib.auth.models import User
 import uuid
 
 
+class ToolCategory(models.Model):
+    """
+    Dynamic tool categories - user can add new categories as needed.
+    """
+    # Keep BigAutoField to match existing database
+    name = models.CharField(
+        max_length=50,
+        unique=True,
+        db_index=True,
+        help_text="Category identifier (lowercase, no spaces, e.g., 'wellbeing')"
+    )
+    display_name = models.CharField(
+        max_length=100,
+        help_text="Human-readable name (e.g., 'Wellbeing & Check-ins')"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="What types of tools belong in this category"
+    )
+    icon = models.CharField(max_length=50, blank=True)
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name_plural = 'Tool Categories'
+    
+    def __str__(self):
+        return f"{self.display_name} ({self.name})"
+
+
 class ToolDefinition(models.Model):
     """
     Fully dynamic tool definition.
@@ -20,16 +51,7 @@ class ToolDefinition(models.Model):
     category = models.CharField(
         max_length=50,
         db_index=True,
-        choices=[
-            ('wellbeing', 'Wellbeing & Check-ins'),
-            ('tasks', 'Task Management'),
-            ('reminders', 'Reminders'),
-            ('moments', 'Moments & Journaling'),
-            ('communication', 'Communication'),
-            ('information', 'Information Retrieval'),
-            ('ai', 'AI & ML'),
-            ('custom', 'Custom'),
-        ]
+        help_text="Category name (must match a ToolCategory.name)"
     )
     
     # LLM-facing description

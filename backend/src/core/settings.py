@@ -106,6 +106,7 @@ INSTALLED_APPS = [
     'wellbeing',
     'todo',
     'notifications',
+    'files',
 
 ]
 
@@ -173,11 +174,14 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+# Media files (User uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.environ.get('MEDIA_ROOT', os.path.join(BASE_DIR.parent, 'media'))
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -206,5 +210,21 @@ CELERY_BEAT_SCHEDULE = {
     'send-pending-checkin-notifications': {
         'task': 'wellbeing.tasks.send_pending_checkin_notifications',
         'schedule': 60.0,  # Run every minute
+    },
+    'cleanup-expired-files': {
+        'task': 'files.tasks.cleanup_expired_files',
+        'schedule': 3600.0,  # Run every hour
+    },
+    'cleanup-old-temporary-files': {
+        'task': 'files.tasks.cleanup_old_temporary_files',
+        'schedule': 3600.0,  # Run every hour
+    },
+    'cleanup-expired-shares': {
+        'task': 'files.tasks.cleanup_expired_shares',
+        'schedule': 3600.0,  # Run every hour
+    },
+    'recalculate-storage-quotas': {
+        'task': 'files.tasks.recalculate_all_storage_quotas',
+        'schedule': crontab(hour=2, minute=0),  # Run daily at 2 AM
     },
 }

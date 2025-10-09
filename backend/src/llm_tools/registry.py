@@ -25,16 +25,19 @@ class ToolRegistry:
         """
         Get the Tool_Retriever as an Ollama Tool.
         This is the ONLY tool initially provided to the LLM.
+        Dynamically generates metadata with current categories.
         """
-        from .retriever import TOOL_RETRIEVER_METADATA
+        from .retriever import get_tool_retriever_metadata
         from ollama import Tool
+        
+        metadata = get_tool_retriever_metadata()
         
         return Tool(
             type='function',
             function=Tool.Function(
-                name=TOOL_RETRIEVER_METADATA['name'],
-                description=TOOL_RETRIEVER_METADATA['description'],
-                parameters=Tool.Function.Parameters(**TOOL_RETRIEVER_METADATA['parameters'])
+                name=metadata['name'],
+                description=metadata['description'],
+                parameters=Tool.Function.Parameters(**metadata['parameters'])
             )
         )
     

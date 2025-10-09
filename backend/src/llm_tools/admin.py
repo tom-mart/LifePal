@@ -60,6 +60,31 @@ class ToolExecutionAdmin(admin.ModelAdmin):
 
 @admin.register(ToolCategory)
 class ToolCategoryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'display_name', 'order', 'is_active']
-    list_editable = ['order', 'is_active']
-    search_fields = ['name', 'display_name']
+    list_display = ['name', 'display_name', 'is_active']
+    list_filter = ['is_active']
+    list_editable = ['is_active']
+    search_fields = ['name', 'display_name', 'description']
+    
+    fieldsets = [
+        ('Category Information', {
+            'fields': ['name', 'display_name', 'description']
+        }),
+        ('Status', {
+            'fields': ['is_active']
+        }),
+    ]
+    
+    def get_readonly_fields(self, request, obj=None):
+        """Dynamically add created_at if it exists"""
+        readonly = []
+        if obj and hasattr(obj, 'created_at'):
+            readonly.append('created_at')
+        return readonly
+    
+    def get_list_display(self, request):
+        """Dynamically add created_at to list if it exists"""
+        list_display = ['name', 'display_name', 'is_active']
+        # Check if created_at field exists in model
+        if hasattr(ToolCategory, 'created_at'):
+            list_display.append('created_at')
+        return list_display

@@ -133,6 +133,11 @@ export default function ChatPage() {
       
       if (response.success) {
         setCurrentConversationId(response.conversation_id);
+        setCheckinId(response.checkin_id);
+        setIsCheckinMode(true);
+        
+        // Don't clear URL yet - wait until check-in is complete
+        // This allows proper state restoration on refresh
         
         if (response.already_started) {
           // Load existing conversation
@@ -316,6 +321,10 @@ export default function ChatPage() {
               if (data.checkin_complete) {
                 setCheckinComplete(true);
                 console.log('Check-in completed with insights:', data.checkin_insights);
+                
+                // Clear checkin_id from URL now that it's complete
+                window.history.replaceState({}, '', '/chat');
+                
                 // Auto-exit check-in mode after a delay
                 setTimeout(() => {
                   exitCheckinMode();

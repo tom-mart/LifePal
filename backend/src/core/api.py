@@ -6,6 +6,7 @@ from todo.api import router as todo_router
 from llm_chat.api import router as chat_router
 from notifications.api import router as notifications_router
 from wellbeing.api import router as wellbeing_router
+from files.api import router as files_router
 
 api = NinjaExtraAPI()
 
@@ -14,5 +15,6 @@ api.add_router("/todo/", todo_router)
 api.add_router("/chat/", chat_router)
 api.add_router("/notifications/", notifications_router)
 api.add_router("/wellbeing/", wellbeing_router)
+api.add_router("/files/", files_router)
 
 api.register_controllers(NinjaJWTDefaultController)
