@@ -10,11 +10,16 @@ LifePal is an intelligent wellbeing companion powered by Ollama that provides pe
 ### Current Features
 #### 🤖 AI Chat Assistant
 - **Personalized Conversations**: Context-aware AI powered by Ollama (llama3.2, qwen2.5, etc.)
+- **Model Selection with Tool Support Detection**: Choose models with visual indicators for tool calling capabilities
+- **Tool-Capable Model Filtering**: Filter models to show only those with excellent tool support
+- **Model Quality Indicators**: Visual badges showing tool support (✓ Tools, ⭐ Excellent)
 - **Real-time Streaming**: Live response streaming for natural interactions
 - **Conversation History**: Save and manage multiple chat conversations (general chats separate from check-ins)
+- **Collapsible History**: Clean mobile interface with expandable conversation history
 - **User Context Integration**: AI knows your preferences, goals, and background
 - **Dynamic Tool System**: Database-driven tools with Tool_Retriever pattern (ReAct framework)
-- **Flexible Tool Execution**: Python scripts, AWS Lambda functions, or external webhooks
+- **Flexible Tool Execution**: Python scripts with async Celery support, AWS Lambda functions, or external webhooks
+- **Async YouTube Downloads**: Non-blocking audio/video downloads via Celery background tasks
 - **Zero-Code Tool Deployment**: Add new tools via Django admin without restarting services
 - **Tool Discovery**: LLM automatically discovers and uses available tools based on user needs
 
@@ -40,7 +45,8 @@ LifePal is an intelligent wellbeing companion powered by Ollama that provides pe
 - **Secure Authentication**: JWT-based authentication system
 - **User Registration & Login**: Email-based account creation
 - **Profile Management**: Customize your preferred name and bio
-- **Settings Dashboard**: Control notifications, theme, timezone, and privacy
+- **Unified Settings Dashboard**: Control notifications, theme, timezone, and privacy in one place
+- **Organized Settings Menu**: Account, Wellbeing, AI, and Data sections with hierarchical navigation
 
 #### 🧠 AI Identity & Context
 - **Customizable AI Identity**: Define AI name, role, personality, and communication style
@@ -56,16 +62,21 @@ LifePal is an intelligent wellbeing companion powered by Ollama that provides pe
 #### 🎨 Modern UI/UX
 - **32 Theme Options**: Full DaisyUI theme support with automatic logo contrast
 - **Mobile-First Design**: Responsive layout optimized for all devices
+- **Multi-Level Navigation**: Hierarchical settings menu with collapsible sections
+- **Mobile-Optimized Sidebar**: Collapsible conversation history with quick action shortcuts
 - **PWA Ready**: Progressive Web App capabilities with offline support
-- **Clean Navigation**: Sidebar navigation with conversation management
+- **Clean Navigation**: Intuitive sidebar with Files and Settings quick access
 - **Dark Mode Support**: Automatic logo inversion for dark themes
+- **High Z-Index Menus**: Properly layered dropdowns that appear above all content
 
-#### 🔔 Push Notifications
+#### 🔔 Notifications
 - **Web Push Notifications**: Browser-based push notifications (PWA)
-- **Scheduled Notifications**: Automatic check-in reminders based on user schedule
+- **Scheduled Check-in Reminders**: Automatic reminders based on user schedule
+- **Optional Check-in Notifications**: Toggle check-in notifications on/off independently
 - **Snooze Support**: Snooze notifications up to 3 times (30-minute intervals)
 - **Smart Scheduling**: Notifications sent 5 minutes before scheduled check-ins
 - **Celery Integration**: Background task processing for reliable delivery
+- **Unified Settings**: All notification preferences in one place
 
 #### 🔒 Security & Privacy
 - **End-to-End Encryption**: Sensitive user data encrypted in database
@@ -349,14 +360,21 @@ The AI uses your context profile to:
 ## 📱 User Interface
 
 ### Chat Interface
-- **Sidebar Navigation**: Access conversations, create new chats
+- **Sidebar Navigation**: Quick access to Files, Profile & Settings
+- **Collapsible History**: Conversation history in expandable section (collapsed by default on mobile)
 - **Real-time Streaming**: See AI responses as they're generated
-- **Conversation History**: Save and revisit past conversations
-- **Mobile-Friendly**: Responsive design for all devices
+- **Conversation Management**: Save, load, and delete conversations
+- **Mobile-Optimized**: Clean interface with hamburger menu and quick actions
+- **Responsive Design**: Optimized for all screen sizes
 
 ### Settings & Profile
 - **Profile**: Set preferred name and bio
-- **Settings**: Configure theme, timezone, notifications, privacy
+- **Unified Settings**: All preferences in one organized page
+  - Theme, timezone, and display preferences
+  - Email, push, and check-in notifications (with independent toggles)
+  - Privacy and data sharing controls
+- **Multi-Level Settings Menu**: Organized into Account, Wellbeing, AI, and Data sections
+- **AI Identity**: Customize AI personality and select tool-capable models
 - **AI Context**: Comprehensive profile for AI personalization
   - Personal Information
   - Wellbeing Context

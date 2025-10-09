@@ -325,21 +325,27 @@ def preview_system_prompt(request):
 
 @router.get("/ai-identity/available-models", auth=JWTAuth(), response=AvailableModelsSchema, tags=["AI Identity"])
 def get_available_models(request):
-    """Get list of available Ollama models"""
+    """Get list of available Ollama models with tool support information"""
     from llm_service.ollama_client import OllamaClient
     
     try:
         client = OllamaClient()
-        models = client.list_models()
-        return {'models': models}
+        models_info = client.list_models_with_capabilities()
+        models = [m['name'] for m in models_info]
+        
+        return {
+            'models': models,
+            'models_info': models_info
+        }
     except Exception as e:
         # Return default models if Ollama is not available
+        default_models = [
+            {'name': 'qwen2.5:latest', 'supports_tools': True, 'tool_quality': 'excellent'},
+            {'name': 'llama3.1:latest', 'supports_tools': True, 'tool_quality': 'good'},
+            {'name': 'mistral:latest', 'supports_tools': True, 'tool_quality': 'good'},
+            {'name': 'llama3.2:latest', 'supports_tools': False, 'tool_quality': 'weak'},
+        ]
         return {
-            'models': [
-                'gemma3:latest',
-                'llama3.2:latest',
-                'llama3.2:3b',
-                'mistral:latest',
-                'phi3:latest',
-            ]
+            'models': [m['name'] for m in default_models],
+            'models_info': default_models
         }

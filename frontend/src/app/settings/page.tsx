@@ -13,6 +13,7 @@ interface UserSettings {
   theme: string;
   email_notifications: boolean;
   push_notifications: boolean;
+  checkin_notifications: boolean;
   allow_relationship_requests: boolean;
   data_sharing_consent: boolean;
   last_active: string | null;
@@ -66,6 +67,7 @@ export default function SettingsPage() {
         theme: settings.theme,
         email_notifications: settings.email_notifications,
         push_notifications: settings.push_notifications,
+        checkin_notifications: settings.checkin_notifications,
         allow_relationship_requests: settings.allow_relationship_requests,
         data_sharing_consent: settings.data_sharing_consent,
       });
@@ -181,7 +183,7 @@ export default function SettingsPage() {
             <div>
               <h2 className="text-2xl font-bold mb-4">Notifications</h2>
               
-              <div className="form-control mb-6">
+              <div className="form-control mb-4">
                 <label className="label cursor-pointer">
                   <span className="label-text font-semibold">Email Notifications</span>
                   <input
@@ -198,9 +200,29 @@ export default function SettingsPage() {
                 </label>
               </div>
 
+              <div className="form-control mb-6">
+                <label className="label cursor-pointer">
+                  <span className="label-text font-semibold">Check-in Notifications</span>
+                  <input
+                    type="checkbox"
+                    className="toggle toggle-primary"
+                    checked={settings.checkin_notifications}
+                    onChange={(e) => setSettings({ ...settings, checkin_notifications: e.target.checked })}
+                  />
+                </label>
+                <label className="label">
+                  <span className="label-text-alt text-base-content/60">
+                    Receive daily check-in reminders (morning and evening)
+                  </span>
+                </label>
+              </div>
+
               {/* Push Notifications Section */}
               <div className="mt-4">
                 <h3 className="text-lg font-semibold mb-3">Push Notifications</h3>
+                <p className="text-sm text-base-content/60 mb-4">
+                  Enable browser push notifications to receive reminders and updates even when you're not on the app.
+                </p>
                 {!vapidPublicKey ? (
                   <div className="alert alert-warning">
                     <svg

@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     musl-dev \
     libpq-dev \
     curl \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

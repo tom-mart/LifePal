@@ -236,7 +236,12 @@ def delete_conversation(request, conversation_id: str):
 @router.post('/send/stream')
 def send_message_stream(request, data: ChatRequestSchema):
     """Send a message to the chatbot and get a streaming response"""
-    user = request.auth
+    try:
+        user = request.auth
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise
     
     # Extract message and conversation ID from schema
     user_message = data.message

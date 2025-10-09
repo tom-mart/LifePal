@@ -395,71 +395,92 @@ export default function ChatPage() {
           </button>
         </div>
 
-        {/* Conversations List */}
+        {/* Sidebar Content */}
         <div className="flex-1 overflow-y-auto px-4 pb-4">
-          <h3 className="text-sm font-semibold text-base-content/70 mb-4 uppercase tracking-wide">Recent Conversations</h3>
-          <div className="space-y-2">
-            {conversations.length === 0 ? (
-              <div className="text-center py-8 text-base-content/50">
-                <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                <p className="text-sm">No conversations yet</p>
-                <p className="text-xs mt-1">Start a new chat to begin</p>
-              </div>
-            ) : (
-              conversations.map((conv) => (
-                <div
-                  key={conv.id}
-                  className={`group relative p-3 rounded-xl cursor-pointer transition-all duration-200 ${
-                    currentConversationId === conv.id 
-                      ? 'bg-primary/10 border border-primary/20 shadow-sm' 
-                      : 'hover:bg-base-200/70 hover:shadow-sm'
-                  }`}
-                  onClick={() => loadConversation(conv.id)}
-                >
-                  <div className="pr-8">
-                    <div className="font-medium text-sm truncate mb-1">{conv.title}</div>
-                    <div className="text-xs text-base-content/50">
-                      {new Date(conv.updated_at).toLocaleDateString(undefined, { 
-                        month: 'short', 
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </div>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm('Delete this conversation?')) {
-                        deleteConversation(conv.id);
-                      }
-                    }}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-error/20 rounded-lg"
-                    title="Delete conversation"
-                  >
-                    <svg className="w-3.5 h-3.5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-              ))
-            )}
+          {/* Quick Actions */}
+          <div className="mb-4 space-y-2">
+            <button 
+              onClick={() => router.push('/files')}
+              className="btn btn-ghost w-full justify-start gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              Files
+            </button>
+            <button 
+              onClick={() => router.push('/profile')}
+              className="btn btn-ghost w-full justify-start gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Profile & Settings
+            </button>
           </div>
+
+          <div className="divider my-2"></div>
+
+          {/* Collapsible History */}
+          <details className="collapse collapse-arrow bg-base-200/50 rounded-box">
+            <summary className="collapse-title text-sm font-semibold text-base-content/70 uppercase tracking-wide min-h-0 py-3">
+              Recent Conversations
+            </summary>
+            <div className="collapse-content px-2">
+              <div className="space-y-2 mt-2">
+                {conversations.length === 0 ? (
+                  <div className="text-center py-6 text-base-content/50">
+                    <svg className="w-10 h-10 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <p className="text-xs">No conversations yet</p>
+                  </div>
+                ) : (
+                  conversations.map((conv) => (
+                    <div
+                      key={conv.id}
+                      className={`group relative p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                        currentConversationId === conv.id 
+                          ? 'bg-primary/10 border border-primary/20 shadow-sm' 
+                          : 'hover:bg-base-200/70 hover:shadow-sm'
+                      }`}
+                      onClick={() => loadConversation(conv.id)}
+                    >
+                      <div className="pr-8">
+                        <div className="font-medium text-sm truncate mb-1">{conv.title}</div>
+                        <div className="text-xs text-base-content/50">
+                          {new Date(conv.updated_at).toLocaleDateString(undefined, { 
+                            month: 'short', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('Delete this conversation?')) {
+                            deleteConversation(conv.id);
+                          }
+                        }}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-error/20 rounded-lg"
+                        title="Delete conversation"
+                      >
+                        <svg className="w-3.5 h-3.5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </details>
         </div>
 
         {/* Sidebar Footer */}
         <div className="p-4 border-t border-base-200 space-y-2">
-          <button 
-            onClick={() => router.push('/profile')}
-            className="btn btn-ghost w-full justify-start gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            Profile & Settings
-          </button>
           <button 
             onClick={logout}
             className="btn btn-ghost w-full justify-start gap-2 text-error"

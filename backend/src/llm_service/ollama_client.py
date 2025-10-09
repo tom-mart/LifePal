@@ -35,6 +35,43 @@ class OllamaClient:
         except Exception as e:
             logger.error(f"Failed to list models: {e}")
             return []
+    
+    def list_models_with_capabilities(self) -> List[Dict[str, Any]]:
+        """List models with their capabilities including tool support"""
+        # Models known to support tool calling well
+        TOOL_CAPABLE_MODELS = {
+            'qwen2.5', 'qwen2', 'llama3.1', 'mistral', 'mixtral',
+            'command-r', 'command-r-plus', 'firefunction'
+        }
+        
+        # Models with weak or no tool support
+        WEAK_TOOL_MODELS = {'llama3.2', 'llama2', 'gemma', 'phi'}
+        
+        try:
+            response = self.client.list()
+            models_info = []
+            
+            if hasattr(response, 'models'):
+                for model in response.models:
+                    model_name = model.model
+                    base_name = model_name.split(':')[0].lower()
+                    
+                    # Determine tool support
+                    supports_tools = any(capable in base_name for capable in TOOL_CAPABLE_MODELS)
+                    weak_tools = any(weak in base_name for weak in WEAK_TOOL_MODELS)
+                    
+                    models_info.append({
+                        'name': model_name,
+                        'supports_tools': supports_tools and not weak_tools,
+                        'tool_quality': 'excellent' if 'qwen2.5' in base_name else 
+                                       'good' if supports_tools and not weak_tools else
+                                       'weak' if weak_tools else 'unknown'
+                    })
+            
+            return models_info
+        except Exception as e:
+            logger.error(f"Failed to list models with capabilities: {e}")
+            return []
 
     def chat(
         self, 
@@ -81,7 +118,8 @@ class OllamaClient:
                     model=model or self.model,
                     messages=current_messages,
                     tools=tools,
-                    stream=False
+                    stream=False,
+                    think=False
                 )
                 
                 message = response['message']
@@ -187,7 +225,8 @@ class OllamaClient:
                     model=model or self.model,
                     messages=current_messages,
                     tools=tools,
-                    stream=True
+                    stream=True,
+                    think=False
                 )
                 
                 full_message = {'role': 'assistant', 'content': '', 'tool_calls': []}

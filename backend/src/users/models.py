@@ -40,6 +40,7 @@ class UserSettings(models.Model):
     # Notification preferences
     email_notifications = models.BooleanField(default=True)
     push_notifications = models.BooleanField(default=True)
+    checkin_notifications = models.BooleanField(default=True, help_text="Enable/disable check-in notifications")
     
     # Privacy settings
     allow_relationship_requests = models.BooleanField(default=True)

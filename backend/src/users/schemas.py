@@ -31,6 +31,7 @@ class UserSettingsSchema(Schema):
     theme: str
     email_notifications: bool
     push_notifications: bool
+    checkin_notifications: bool
     allow_relationship_requests: bool
     data_sharing_consent: bool
     checkin_schedule: Optional[dict] = None
@@ -42,6 +43,7 @@ class UserSettingsUpdateSchema(Schema):
     theme: Optional[str] = None
     email_notifications: Optional[bool] = None
     push_notifications: Optional[bool] = None
+    checkin_notifications: Optional[bool] = None
     allow_relationship_requests: Optional[bool] = None
     data_sharing_consent: Optional[bool] = None
     checkin_schedule: Optional[dict] = None
@@ -240,6 +242,14 @@ class SystemPromptPreviewSchema(Schema):
     system_prompt: str
 
 
+class ModelInfoSchema(Schema):
+    """Schema for model information"""
+    name: str
+    supports_tools: bool
+    tool_quality: str  # 'excellent', 'good', 'weak', 'unknown'
+
+
 class AvailableModelsSchema(Schema):
     """Schema for available Ollama models"""
-    models: list[str]
+    models: list[str]  # For backward compatibility
+    models_info: Optional[list[ModelInfoSchema]] = None

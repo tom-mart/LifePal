@@ -250,20 +250,3 @@ class ToolExecution(models.Model):
     
     def __str__(self):
         return f"{self.tool.name} by {self.user.username} - {self.status}"
-
-
-class ToolCategory(models.Model):
-    """Tool categories for organization"""
-    name = models.CharField(max_length=50, unique=True)
-    display_name = models.CharField(max_length=100)
-    description = models.TextField()
-    icon = models.CharField(max_length=50, blank=True)
-    order = models.IntegerField(default=0)
-    is_active = models.BooleanField(default=True)
-    
-    class Meta:
-        verbose_name_plural = 'Tool Categories'
-        ordering = ['order', 'name']
-    
-    def __str__(self):
-        return self.display_name

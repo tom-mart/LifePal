@@ -125,6 +125,11 @@ def send_pending_checkin_notifications():
         try:
             user = checkin.daily_log.user
             
+            # Check if user has checkin notifications enabled
+            if hasattr(user, 'usersettings') and not user.usersettings.checkin_notifications:
+                logger.debug(f"User {user.username} has checkin notifications disabled, skipping notification for check-in {checkin.id}")
+                continue
+            
             # Check if user has active push subscriptions
             has_active_subscription = user.push_subscriptions.filter(is_active=True).exists()
             if not has_active_subscription:

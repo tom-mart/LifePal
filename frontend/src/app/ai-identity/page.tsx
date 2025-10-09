@@ -28,10 +28,17 @@ interface AIIdentityProfile {
   updated_at: string;
 }
 
+interface ModelInfo {
+  name: string;
+  supports_tools: boolean;
+  tool_quality: string;
+}
+
 interface ConnectionStatus {
   connected: boolean;
   checking: boolean;
   models: string[];
+  models_info: ModelInfo[];
 }
 
 export default function AIIdentityPage() {
@@ -47,8 +54,10 @@ export default function AIIdentityPage() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
     connected: false,
     checking: true,
-    models: []
+    models: [],
+    models_info: []
   });
+  const [showOnlyToolCapable, setShowOnlyToolCapable] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -62,17 +71,19 @@ export default function AIIdentityPage() {
   const checkConnection = async () => {
     setConnectionStatus(prev => ({ ...prev, checking: true }));
     try {
-      const data = await apiClient.get<{ models: string[] }>('/api/users/ai-identity/available-models');
+      const data = await apiClient.get<{ models: string[]; models_info?: ModelInfo[] }>('/api/users/ai-identity/available-models');
       setConnectionStatus({
         connected: data.models.length > 0,
         checking: false,
-        models: data.models
+        models: data.models,
+        models_info: data.models_info || []
       });
     } catch (err) {
       setConnectionStatus({
         connected: false,
         checking: false,
-        models: []
+        models: [],
+        models_info: []
       });
     }
   };
@@ -214,7 +225,7 @@ export default function AIIdentityPage() {
             <div>
               <h2 className="text-2xl font-bold mb-4">Model Selection</h2>
               
-              <div className="form-control">
+              <div className="form-control mb-4">
                 <label className="label">
                   <span className="label-text font-semibold">Preferred AI Model</span>
                   <span className={`badge ${connectionStatus.connected ? 'badge-success' : 'badge-warning'}`}>
@@ -228,9 +239,15 @@ export default function AIIdentityPage() {
                   disabled={!connectionStatus.connected}
                 >
                   {connectionStatus.models.length > 0 ? (
-                    connectionStatus.models.map(model => (
-                      <option key={model} value={model}>{model}</option>
-                    ))
+                    connectionStatus.models_info
+                      .filter(m => !showOnlyToolCapable || m.supports_tools)
+                      .map(modelInfo => (
+                        <option key={modelInfo.name} value={modelInfo.name}>
+                          {modelInfo.name}
+                          {modelInfo.supports_tools && ` ✓ Tools`}
+                          {modelInfo.tool_quality === 'excellent' && ' ⭐'}
+                        </option>
+                      ))
                   ) : (
                     <option value={profile.preferred_model}>{profile.preferred_model} (offline)</option>
                   )}
@@ -241,6 +258,46 @@ export default function AIIdentityPage() {
                   </span>
                 </label>
               </div>
+
+              {connectionStatus.models_info.length > 0 && (
+                <div className="form-control mb-4">
+                  <label className="label cursor-pointer">
+                    <span className="label-text">Show only models with tool support</span>
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-primary"
+                      checked={showOnlyToolCapable}
+                      onChange={(e) => setShowOnlyToolCapable(e.target.checked)}
+                    />
+                  </label>
+                  <label className="label">
+                    <span className="label-text-alt text-base-content/60">
+                      Tool-capable models can use features like file management, reminders, and web searches
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              {profile.preferred_model && connectionStatus.models_info.length > 0 && (
+                <div className="alert alert-info">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  <div>
+                    {(() => {
+                      const currentModel = connectionStatus.models_info.find(m => m.name === profile.preferred_model);
+                      if (!currentModel) return <span>Model information unavailable</span>;
+                      if (currentModel.tool_quality === 'excellent') {
+                        return <span><strong>Excellent choice!</strong> This model has excellent tool calling capabilities.</span>;
+                      } else if (currentModel.supports_tools) {
+                        return <span><strong>Good choice!</strong> This model supports tool calling.</span>;
+                      } else {
+                        return <span><strong>Limited tools:</strong> This model has weak tool support. Consider qwen2.5 for better functionality.</span>;
+                      }
+                    })()}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="divider"></div>
