@@ -1,0 +1,16 @@
+# Django dependencies
+
+django
+django-ninja
+django-ninja-extra
+django-ninja-jwt
+
+# AI Agent dependencies
+
+ollama
+pydantic-ai
+
+# DB dependencies
+
+psycopg2-binary
+pgvector
