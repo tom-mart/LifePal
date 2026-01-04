@@ -33,14 +33,17 @@ def get_or_create_conversation(user, conversation_id=None, agent_id=None):
 
 def route_to_specialist(message, conversation, user):
     """
-    Route message through Operator to get specialist agent.
+    Determine which agent should handle this message.
     Returns (agent_model, agent_name) tuple.
     
-    If already using a specialist, returns that agent directly.
+    Logic:
+    - If conversation already has a specialist agent (not Operator), use it directly
+    - If conversation has Operator, route through Operator to find appropriate specialist
+    - This allows users to either let Operator route OR directly specify an agent
     """
     agent_model = conversation.agent
     
-    # If not Operator, use current agent directly
+    # If not Operator, use current agent directly (includes user-specified specialists)
     if agent_model.name != "Operator":
         agent_name = agent_model.name.lower().replace(' ', '_')
         return agent_model, agent_name
@@ -78,7 +81,7 @@ def route_to_specialist(message, conversation, user):
     return specialist, agent_name
 
 
-def save_message(conversation, user_prompt, ai_response, reasoning, timestamp, embedding):
+def save_message(conversation, user_prompt, ai_response, reasoning, timestamp, embedding, debug_data=None):
     """Save message with all metadata to database"""
     from agents.models import Message
     
@@ -88,7 +91,8 @@ def save_message(conversation, user_prompt, ai_response, reasoning, timestamp, e
         ai_response=ai_response,
         ai_reasoning=reasoning,
         timestamp=timestamp,
-        embedding=embedding
+        embedding=embedding,
+        debug_data=debug_data
     )
     
     conversation.mark_for_summarization()

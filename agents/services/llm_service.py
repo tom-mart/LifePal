@@ -5,15 +5,7 @@ from pydantic_ai.messages import ModelMessage
 from pydantic import TypeAdapter
 from typing import Optional, List, Callable
 from .tool_parser import TextToolParser
-
-
-class AgentDeps:
-    """Dependencies passed to all agents during execution"""
-    def __init__(self, max_tokens: int, current_tokens: int, user=None, agent=None):
-        self.max_tokens = max_tokens
-        self.current_tokens = current_tokens
-        self.user = user
-        self.agent = agent
+from .deps import AgentDeps
 
 
 # Models known to not support native tools
@@ -164,11 +156,32 @@ class LLMService:
             return self._handle_text_tool_calling(message, messages, deps)
         
         # For models with native tool support, use normal streaming
-        return self.agent.run_stream_sync(
-            message,
-            message_history=messages,
-            deps=deps,
-        )
+        print(f"[LLM] Starting stream for message: {message[:50]}...")
+        print(f"[LLM] Model: {self.model_name}")
+        print(f"[LLM] Message history length: {len(messages)}")
+        print(f"[LLM] Has tools: {self.has_tools}")
+        
+        try:
+            print(f"[LLM] Calling agent.run_stream_sync()...")
+            stream = self.agent.run_stream_sync(
+                message,
+                message_history=messages,
+                deps=deps,
+            )
+            print(f"[LLM] ✓ Stream object created successfully")
+            return stream
+        except Exception as e:
+            print(f"\n{'='*80}")
+            print(f"[ERROR] Stream creation failed")
+            print(f"Exception type: {type(e).__module__}.{type(e).__name__}")
+            print(f"Exception message: {str(e)}")
+            print(f"\nFull traceback:")
+            print(f"{'='*80}")
+            import traceback
+            import sys
+            traceback.print_exc(file=sys.stdout)
+            print(f"{'='*80}\n")
+            raise
     
     def _handle_text_tool_calling(self, message: str, messages: list, deps: AgentDeps):
         """Handle tool calling for models without native tool support"""

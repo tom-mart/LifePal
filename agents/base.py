@@ -86,6 +86,7 @@ class BaseAgent:
             user_context = f"Username: {username}"
         
         # Create LLM service with all tools (common + agent-specific)
+        print(f"[AGENT] Creating LLM service for {self.agent_model.name}")
         llm = LLMService(
             model_name=self.agent_model.model_name,
             base_url=os.environ.get("OLLAMA_BASE_URL"),
@@ -96,6 +97,7 @@ class BaseAgent:
         )
         
         # Chat stream
+        print(f"[AGENT] Calling llm.chat_stream()...")
         stream = llm.chat_stream(
             message=message,
             message_history=conversation.short_term_memory,
@@ -103,6 +105,7 @@ class BaseAgent:
             user=user,
             agent=self.agent_model
         )
+        print(f"[AGENT] ✓ Stream returned from llm.chat_stream()")
         
         return stream
     

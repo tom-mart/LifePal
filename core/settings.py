@@ -2,8 +2,22 @@ from pathlib import Path
 from datetime import timedelta
 import os
 
+import firebase_admin
+from firebase_admin import credentials
+from django.db.backends.postgresql.base import DatabaseWrapper
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+DJANGO_DEBUG = os.environ.get('DJANGO_DEBUG')
+if DJANGO_DEBUG is not None:
+    DEBUG = DJANGO_DEBUG.lower() in ('true', '1', 'yes')
+else:
+    # Default to True for development if not set
+    DEBUG = True
+
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 
 # Quick-start development settings - unsuitable for production
@@ -12,10 +26,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", 'django-insecure-85ua#kh!q=9s3%+9aq2ar$88c7u=5bqd54s6@b&pd!cr0sx4&$')
 
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = ['*']
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost',
+    'http://127.0.0.1',
+    'http://192.168.1.229',
+    'https://192.168.1.229',
+    'https://lifepal.app',
+]
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_HTTPONLY = False
 
 # Application definition
 
@@ -31,14 +61,30 @@ INSTALLED_APPS = [
 
     'ninja_extra',
     'ninja_jwt',
+    'django_q',
 
     # Local apps
     
     'core',
     'chat',
     'agents',
+    'notifications',
+
     'fitness',
+    'wellbeing',
+
 ]
+# Django Q configuration (using ORM broker for scheduled/background tasks)
+Q_CLUSTER = {
+    'name': 'lifepal',
+    'workers': 4,
+    'recycle': 500,
+    'timeout': 60,
+    'retry': 120,
+    'queue_limit': 50,
+    'bulk': 10,
+    'orm': 'default',  # Use Django ORM as broker
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -73,14 +119,19 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# Add pgvector extension to the database
+DatabaseWrapper.data_types['vector'] = 'vector'
+
+
+# Database configuration using environment variables (matches docker-compose and deployment.env)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT'),
+        'NAME': os.environ['DB_NAME'],
+        'USER': os.environ['DB_USER'],
+        'PASSWORD': os.environ['DB_PASSWORD'],
+        'HOST': os.environ['DB_HOST'],
+        'PORT': os.environ['DB_PORT'],
     }
 }
 
@@ -120,7 +171,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -131,3 +182,9 @@ NINJA_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
+
+# Path to your Firebase Admin SDK JSON file
+FIREBASE_ADMIN_SDK_JSON = BASE_DIR / "notifications/firebase/lifepal-app-firebase-adminsdk.json"
+
+cred = credentials.Certificate(FIREBASE_ADMIN_SDK_JSON)
+firebase_admin.initialize_app(cred)

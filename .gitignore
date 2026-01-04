@@ -10,3 +10,9 @@ cert.*
 nohup.out
 
 /docs/
+
+*.conf
+
+*.sh
+
+/staticnotifications/firebase/lifepal-app-firebase-adminsdk.json

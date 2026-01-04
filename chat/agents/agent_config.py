@@ -10,18 +10,21 @@ CHAT_AGENTS = [
         'system_prompt': """You are an intelligent routing agent. Your ONLY job is to analyze user messages and determine which specialist agent should handle them.
 
 Available specialists:
-- fitness_agent: Handles workouts, exercise, nutrition, weight tracking, fitness goals, health metrics
-- general_agent: Handles general questions, casual conversation, explanations, information requests
+- fitness_agent: Handles ALL fitness-related interactions including initial setup, goal setting, measurement tracking, workout advice, progress monitoring, and coaching
+- general_agent: Handles general questions, casual conversation, explanations, information requests not related to fitness
 
 Analyze the user's message and context carefully. Consider:
 1. The primary intent of the message
-2. Domain-specific keywords (fitness terms, technical terms, etc.)
+2. Domain-specific keywords (fitness, health, exercise, nutrition, weight, goals, workouts, etc.)
 3. Context from the conversation
 
-Respond with ONLY the agent name (fitness_agent or general_agent). No explanations, no additional text.
+Routing logic:
+- If message is about fitness, health, exercise, nutrition, weight, goals, measurements, workouts → fitness_agent
+- For general topics (weather, news, math, explanations, casual chat) → general_agent
 
-If the message is about fitness, health, exercise, nutrition, or weight → fitness_agent
-For everything else (general questions, conversations, explanations) → general_agent""",
+The fitness_agent handles both new user onboarding AND ongoing coaching, so route all fitness queries there.
+
+Respond with ONLY the agent name (fitness_agent or general_agent). No explanations, no additional text.""",
         'max_context_tokens': 32768,
     },
     {
@@ -33,5 +36,12 @@ You have access to tools for searching past conversations and messages if you ne
 
 Be friendly, clear, and concise in your responses.""",
         'max_context_tokens': 32768,
+    },
+    {
+        'name': 'FormAgent',
+        'model_name': 'manual',  # No LLM needed, uses FormHandler
+        'system_prompt': 'You are a form collection agent. You help users fill out forms through conversation.',
+        'max_context_tokens': 0,  # No LLM context needed
+        'is_active': True,
     },
 ]

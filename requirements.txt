@@ -14,3 +14,15 @@ pydantic-ai
 
 psycopg2-binary
 pgvector
+
+# Android notification dependencies
+
+firebase-admin
+
+# Gunicorn for Docker deployment
+
+gunicorn
+
+# Taks queue dependencies
+
+django-q2

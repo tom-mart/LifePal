@@ -3,7 +3,7 @@ Common tools available to all agents.
 """
 
 from pydantic_ai import RunContext
-from agents.services.llm_service import AgentDeps
+from agents.services.deps import AgentDeps
 from agents.services.embedding_service import EmbeddingService
 from agents.models import Message, Conversation
 

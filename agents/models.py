@@ -56,6 +56,12 @@ class Message(models.Model):
     # Response Part (AI)
     ai_response = models.TextField(help_text="The AI's final text response")
     ai_reasoning = models.TextField(blank=True, null=True, help_text="Internal thought process (ThinkingPart)")
+    # Debugging - Full LLM interaction history
+    debug_data = models.JSONField(
+        null=True, 
+        blank=True, 
+        help_text="Complete pydantic-ai result with all messages, tool calls, thinking, and usage stats"
+    )
     # Metadata
     timestamp = models.DateTimeField(auto_now_add=True)
 

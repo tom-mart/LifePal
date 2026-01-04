@@ -7,4 +7,4 @@ class ChatConfig(AppConfig):
     
     def ready(self):
         # Import to register agents
-        from chat.agents import general_agent, operator_agent  # noqa
+        from chat.agents import general_agent, operator_agent, form_agent 
