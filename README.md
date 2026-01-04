@@ -196,6 +196,12 @@ python manage.py import_fitness_data
 
 ### Common Tools (All Agents)
 | Tool | Purpose |
+|------|---------|
+| `search_past_conversations()` | Search conversation summaries |
+| `search_past_messages()` | Search specific messages |
+| `update_agent_preferences()` | Customize agent behavior |
+| `get_agent_preferences()` | View current preferences |
+
 ## Database Models
 
 ### Agents

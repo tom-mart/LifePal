@@ -15,4 +15,6 @@ nohup.out
 
 *.sh
 
-/staticnotifications/firebase/lifepal-app-firebase-adminsdk.json
+/static/
+
+/notifications/firebase/lifepal-app-firebase-adminsdk.json
